@@ -3,6 +3,7 @@
 from datetime import datetime
 from database import init_db, clear_old, get_top_listings, get_stats
 from scraper import scrape_all
+from history import save_daily_summary
 
 
 def main():
@@ -12,6 +13,7 @@ def main():
     saved = scrape_all(conn)
     total, good = get_stats(conn)
     print(f'\nNew: {saved} | DB: {total} total, {good} good (>=50)')
+    save_daily_summary(conn)
     print('\n--- TOP LISTINGS ---')
     for t, p, u, loc, sc, src in get_top_listings(conn):
         print(f'[{sc}] ${p:,.0f} - {t[:55]}')
