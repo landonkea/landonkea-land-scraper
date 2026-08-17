@@ -5,8 +5,8 @@ import re
 SKIP = re.compile(r'for rent|for lease|room|roommate|parking|storage|mobile home park| rv |rv lot|camper|vacation rental|airbnb|vrbo', re.I)
 FLOOD = re.compile(r'flood zone|floodplain|flood plain|flood insurance|fema flood|100-year flood', re.I)
 LOCKED = re.compile(r'landlocked|no road access|no easement|no legal access', re.I)
-HOA = re.compile(r'hoa\b|homeowners association|hoa fees|hoa dues|cc&r|cc and r', re.I)
-LEASE = re.compile(r'lease only|for lease|leasing only|ground lease|sublease', re.I)
+NO_HOA = re.compile(r'no\s*hoa|no\s*homeowners\s*assoc|no\s*restrictions|unrestricted|no\s*cc&r|no\s*cc\s*and\s*r|no\s*dues', re.I)
+HOA = re.compile(r'hoa\b|homeowners association|hoa fees|hoa dues|cc&r|cc and r', re.I)LEASE = re.compile(r'lease only|for lease|leasing only|ground lease|sublease', re.I)
 LIEN = re.compile(r'tax lien|government lien|irs lien|tax deed|tax sale|auction|bank owned|reo|short sale|foreclosure|lis pendens', re.I)
 PAVED = re.compile(r'paved road|paved access|asphalt|highway frontage|state road', re.I)
 ELECTRIC = re.compile(r'electric|power|electricity|pg&e|aps|srp|utility pole|grid power', re.I)
@@ -36,7 +36,9 @@ def parse_acres(text):
 def should_skip(title, text=''):
     """Return True if listing should be skipped."""
     c = f'{title} {text}'
-    if any(p.search(c) for p in [SKIP, FLOOD, LOCKED, HOA, LEASE, LIEN]):
+    if any(p.search(c) for p in [SKIP, FLOOD, LOCKED, LEASE, LIEN]):
+        return True
+    if HOA.search(c) and not NO_HOA.search(c):
         return True
     acres = parse_acres(c)
     if acres is not None and acres < 0.2:
@@ -50,6 +52,7 @@ def score_listing(title, text='', price=0):
     s = 40
     if HIGH.search(c): s += 35
     if CARRY.search(c): s += 25
+    if NO_HOA.search(c): s += 10
     if PAVED.search(c): s += 10
     if ELECTRIC.search(c): s += 8
     if MOBILE.search(c): s += 10
