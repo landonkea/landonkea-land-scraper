@@ -1,6 +1,4 @@
-"""
-main.py - Entry point. Land scraper for Arizona.
-"""
+"""main.py - Entry point."""
 
 from datetime import datetime
 from database import init_db, clear_old, get_top_listings, get_stats
@@ -10,22 +8,14 @@ from scraper import scrape_all
 def main():
     conn = init_db()
     clear_old(conn)
-
-    print(f'Starting land scrape at {datetime.now()}')
-    print('Area: South of Flagstaff, North of Tucson')
-    print('Focus: Cheapest land, water well + owner carry get bonus')
-
+    print(f'Land scrape {datetime.now()} — south Flagstaff, north Tucson')
     saved = scrape_all(conn)
-    print(f'\nTotal new listings: {saved}')
-
     total, good = get_stats(conn)
-    print(f'Database: {total} total, {good} good (score >= 50)')
-
+    print(f'\nNew: {saved} | DB: {total} total, {good} good (>=50)')
     print('\n--- TOP LISTINGS ---')
-    for title, price, url, loc, score, source in get_top_listings(conn):
-        print(f'[{score}] ${price:,.0f} - {title[:55]}')
-        print(f'    {source} | {url}')
-
+    for t, p, u, loc, sc, src in get_top_listings(conn):
+        print(f'[{sc}] ${p:,.0f} - {t[:55]}')
+        print(f'    {src} | {u}')
     conn.close()
 
 
