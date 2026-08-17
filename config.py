@@ -38,10 +38,28 @@ PLAYWRIGHT_SITES = [
 # Craigslist search paths for land
 CL_LAND_PATH = '/rea'  # real estate for sale (appended to /search)
 
-# Geographic bounds (south of Flagstaff, north of Tucson)
-# Latitude: Flagstaff ~35.2, Tucson ~32.2
-# We'll filter results to this range
+# Geographic bounds (south of Flagstaff, north of Scottsdale/Cave Creek)
+# Latitude: Flagstaff ~35.2, Scottsdale ~33.5
+# Sweet spot: Prescott/Sedona area ~34.2-34.8
 GEO_BOUNDS = {
-    'min_lat': 32.3,   # North of Tucson
+    'min_lat': 33.5,   # North of Scottsdale/Cave Creek
     'max_lat': 35.1,   # South of Flagstaff
 }
+
+# Preferred area: Prescott/Sedona region (lower weight, but nice to have)
+PREFERRED_AREAS = [
+    'prescott', 'prescott valley', 'sedona', 'cottle', 'camp verde',
+    'cottonwood', 'clarkdale', 'jerome', 'cordes lakes', 'spring valley',
+    'mayer', 'dewey', 'humboldt', 'chino valley', 'ash fork', 'williams',
+    'verde valley', 'big park', 'west Sedona', 'Lake Montezuma',
+    'Beaver Creek', 'Cornville', 'Page Springs', 'Yarnell', 'Peeples Valley',
+    ' Skull Valley', 'Paulden', 'Chino Valley', 'Kirkland',
+]
+
+# Craigslist regions in our area
+CRAIGSLIST_REGIONS = [
+    'phoenix',    # Phoenix metro, north of Scottsdale
+    'prescott',   # Prescott area - our sweet spot
+    'flagstaff',  # Northern edge (Flagstaff itself is borderline)
+    'yuma',       # Yuma - some desert land
+]
