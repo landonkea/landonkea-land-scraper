@@ -100,5 +100,185 @@
         "avg_price": 0
       }
     }
+  },
+  {
+    "date": "2026-08-19",
+    "total": 491,
+    "good": 241,
+    "avg_price": 229268,
+    "median_price": 100000,
+    "avg_score": 50.3,
+    "by_source": {
+      "craigslist": {
+        "count": 438,
+        "avg_price": 249951
+      },
+      "landmodo": {
+        "count": 23,
+        "avg_price": 7470
+      },
+      "govauctions": {
+        "count": 12,
+        "avg_price": 2868
+      },
+      "maricopa_county": {
+        "count": 18,
+        "avg_price": 0
+      }
+    }
+  },
+  {
+    "date": "2026-08-19",
+    "total": 499,
+    "good": 243,
+    "avg_price": 231150,
+    "median_price": 106400,
+    "avg_score": 50.2,
+    "by_source": {
+      "craigslist": {
+        "count": 438,
+        "avg_price": 249951
+      },
+      "landmodo": {
+        "count": 23,
+        "avg_price": 7470
+      },
+      "govauctions": {
+        "count": 12,
+        "avg_price": 2868
+      },
+      "maricopa_county": {
+        "count": 18,
+        "avg_price": 0
+      },
+      "adot": {
+        "count": 8,
+        "avg_price": 328328
+      }
+    }
+  },
+  {
+    "date": "2026-08-19",
+    "total": 499,
+    "good": 243,
+    "avg_price": 231150,
+    "median_price": 106400,
+    "avg_score": 50.2,
+    "by_source": {
+      "craigslist": {
+        "count": 438,
+        "avg_price": 249951
+      },
+      "landmodo": {
+        "count": 23,
+        "avg_price": 7470
+      },
+      "govauctions": {
+        "count": 12,
+        "avg_price": 2868
+      },
+      "maricopa_county": {
+        "count": 18,
+        "avg_price": 0
+      },
+      "adot": {
+        "count": 8,
+        "avg_price": 328328
+      }
+    }
+  },
+  {
+    "date": "2026-08-19",
+    "total": 499,
+    "good": 243,
+    "avg_price": 231150,
+    "median_price": 106400,
+    "avg_score": 50.2,
+    "by_source": {
+      "craigslist": {
+        "count": 438,
+        "avg_price": 249951
+      },
+      "landmodo": {
+        "count": 23,
+        "avg_price": 7470
+      },
+      "govauctions": {
+        "count": 12,
+        "avg_price": 2868
+      },
+      "maricopa_county": {
+        "count": 18,
+        "avg_price": 0
+      },
+      "adot": {
+        "count": 8,
+        "avg_price": 328328
+      }
+    }
+  },
+  {
+    "date": "2026-08-19",
+    "total": 499,
+    "good": 243,
+    "avg_price": 231150,
+    "median_price": 106400,
+    "avg_score": 50.2,
+    "by_source": {
+      "craigslist": {
+        "count": 438,
+        "avg_price": 249951
+      },
+      "landmodo": {
+        "count": 23,
+        "avg_price": 7470
+      },
+      "govauctions": {
+        "count": 12,
+        "avg_price": 2868
+      },
+      "maricopa_county": {
+        "count": 18,
+        "avg_price": 0
+      },
+      "adot": {
+        "count": 8,
+        "avg_price": 328328
+      }
+    }
+  },
+  {
+    "date": "2026-08-19",
+    "total": 834,
+    "good": 578,
+    "avg_price": 129201,
+    "median_price": 3325,
+    "avg_score": 62.1,
+    "by_source": {
+      "craigslist": {
+        "count": 438,
+        "avg_price": 249951
+      },
+      "landmodo": {
+        "count": 23,
+        "avg_price": 7470
+      },
+      "govauctions": {
+        "count": 12,
+        "avg_price": 2868
+      },
+      "maricopa_county": {
+        "count": 18,
+        "avg_price": 0
+      },
+      "adot": {
+        "count": 8,
+        "avg_price": 328328
+      },
+      "cochise_county": {
+        "count": 335,
+        "avg_price": 1079
+      }
+    }
   }
 ]

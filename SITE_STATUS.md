@@ -8,6 +8,8 @@
 | **Landmodo** | Playwright | ~25 | Owner-financed land marketplace. Good for terms deals ($100-200/mo). |
 | **GovAuctions** | Playwright | ~12 | Government surplus (HUD, federal, county tax deeds). Some as low as $995. |
 | **Maricopa County** | Playwright | ~18 | Excess government land (flood control, highway). Prices TBD or low. |
+| **ADOT** | Requests (HTML) | 8 | State DOT surplus land. $75K-$733K. Clean HTML, well-structured. |
+| **Cochise County** | PDF (pdfplumber) | ~335 | Tax deed parcels. $265-$8,640. PDF from county, updated per sale cycle. |
 
 ---
 
@@ -192,7 +194,7 @@ FlareSolverr would add maybe 1-2 sites. Not worth the setup complexity for a fre
 
 | Approach | Cost | Sites Unlocked | Worth It? |
 |----------|------|----------------|-----------|
-| Current setup (Craigslist + Landmodo + GovAuctions + Maricopa) | Free | 4 sources, ~491 listings | Yes — already finding cheapest deals |
+| Current setup (Craigslist + Landmodo + GovAuctions + Maricopa + ADOT + Cochise) | Free | 6 sources, ~834 listings | Yes — already finding cheapest deals |
 | FlareSolverr | Free (self-hosted) | +1-2 sites (Crexi) | Marginal |
 | Residential proxy only | $50/mo | +5 Akamai sites | Maybe if you want more sources |
 | Full stack (proxy + tools) | $50/mo | +7-8 sites | Overkill for land scraping |
@@ -208,11 +210,23 @@ FlareSolverr would add maybe 1-2 sites. Not worth the setup complexity for a fre
 |------|--------|---------------|
 | **ParcelFair** | Accessible, no listings | Landing page, links to external auction sites. Requires login for full data. |
 | **TaxSaleAtlas** | Accessible, no listings | Informational only — explains tax lien rules, links to county sites. |
-| **ADOT Surplus** | Accessible, listings hidden | County sections are collapsed. Few listings, prices TBD. |
 | **Yavapai County** | Accessible, no direct listings | Links to Public Surplus (external) and PDF documents. |
+| **Pima County** | Accessible, no land | Surplus auctions are for equipment/vehicles only. |
+| **Gila County** | Outdated PDF (2012) | Sealed bid process, no current online listings. |
+| **Greenlee County** | No deed list online | Tax lien sales only, no public deed list. |
+| **Santa Cruz County** | No public list | Tax lien sale, requires login/registration. |
+| **Apache County** | 403 errors | Site blocks automated access. |
+| **Yuma County** | 403 errors | Site blocks automated access. |
+| **Pinal County** | Empty (seasonal) | Tax deed sale was June 2026, now over. Check back next year. |
+| **Navajo County** | Sold out | Auction was Jan 2027, all parcels sold. |
+| **Public Surplus** | 0 AZ listings now | Platform for county auctions, but no active AZ land right now. |
+| **Mohave County** | PDF only | OTC list is PDF, updated monthly. Could add with pdfplumber. |
+| **Coconino County** | PDF only | OTC list is PDF, monthly updates. Could add with pdfplumber. |
+| **Graham County** | PDF only | Parcel list is PDF. Could add with pdfplumber. |
+| **La Paz County** | PDF only | Compiled list is PDF, ~30+ parcels. Could add with pdfplumber. |
 
 ## Not Tested Yet
 
 | Site | URL | Notes |
 |------|-----|-------|
-| Other county sites | Various | Apache, Cochise, Coconino, Gila, Graham, Greenlee, La Paz, Mohave, Navajo, Pima, Pinal, Santa Cruz counties may have tax deed listings |
+| None | — | All 15 Arizona counties tested |
