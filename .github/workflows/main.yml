@@ -11,9 +11,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install -r requirements.txt && playwright install chromium
-        env:
-          PLAYWRIGHT_BROWSERS_PATH: 0
+      - run: pip install -r requirements.txt && playwright install --with-deps chromium
       - run: python main.py
         env:
           DISCORD_WEBHOOK_URL_LAND: ${{ secrets.DISCORD_WEBHOOK_URL_LAND }}
