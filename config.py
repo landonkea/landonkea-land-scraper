@@ -10,7 +10,7 @@ ROOT_DIR = pathlib.Path(__file__).parent  # __file__ points to this config.py, .
 DB_PATH = str(ROOT_DIR / 'data' / 'lands.db')  # builds the full path to the SQLite database and converts it to a string so sqlite3 accepts it
 DISCORD_WEBHOOK = os.environ.get('DISCORD_WEBHOOK_URL_LAND')  # grabs the Discord webhook URL from the environment; returns None if it's missing
 MIN_SCORE = 40                           # parcels scoring below this threshold get skipped during filtering
-MAX_PRICE = 30000                        # listings above this price won't get sent to Discord
+MAX_PRICE = 100000                       # listings above this price won't get sent to Discord
 
 CRAIGSLIST_REGIONS = ['phoenix', 'prescott', 'flagstaff', 'yuma']  # these are the Craigslist subdomains I want to scrape for land listings
 CL_LAND_PATH = '/rea'                    # Craigslist appends this path to the region URL to land on the real estate section
