@@ -7,6 +7,7 @@
 | **Craigslist** | Requests (HTML) | ~438 | Phoenix, Prescott, Flagstaff, Yuma. Best for cheap private-seller deals. |
 | **Landmodo** | Playwright | ~25 | Owner-financed land marketplace. Good for terms deals ($100-200/mo). |
 | **GovAuctions** | Playwright | ~12 | Government surplus (HUD, federal, county tax deeds). Some as low as $995. |
+| **Maricopa County** | Playwright | ~18 | Excess government land (flood control, highway). Prices TBD or low. |
 
 ---
 
@@ -191,7 +192,7 @@ FlareSolverr would add maybe 1-2 sites. Not worth the setup complexity for a fre
 
 | Approach | Cost | Sites Unlocked | Worth It? |
 |----------|------|----------------|-----------|
-| Current setup (Craigslist + Landmodo + GovAuctions) | Free | 3 sources, ~475 listings | Yes — already finding cheapest deals |
+| Current setup (Craigslist + Landmodo + GovAuctions + Maricopa) | Free | 4 sources, ~491 listings | Yes — already finding cheapest deals |
 | FlareSolverr | Free (self-hosted) | +1-2 sites (Crexi) | Marginal |
 | Residential proxy only | $50/mo | +5 Akamai sites | Maybe if you want more sources |
 | Full stack (proxy + tools) | $50/mo | +7-8 sites | Overkill for land scraping |
@@ -201,12 +202,17 @@ FlareSolverr would add maybe 1-2 sites. Not worth the setup complexity for a fre
 
 ---
 
-## Sites Not Tested
+## Sites Tested But Not Added
+
+| Site | Result | Why Not Added |
+|------|--------|---------------|
+| **ParcelFair** | Accessible, no listings | Landing page, links to external auction sites. Requires login for full data. |
+| **TaxSaleAtlas** | Accessible, no listings | Informational only — explains tax lien rules, links to county sites. |
+| **ADOT Surplus** | Accessible, listings hidden | County sections are collapsed. Few listings, prices TBD. |
+| **Yavapai County** | Accessible, no direct listings | Links to Public Surplus (external) and PDF documents. |
+
+## Not Tested Yet
 
 | Site | URL | Notes |
 |------|-----|-------|
-| ParcelFair | parcelfair.com | Tax lien/deed aggregator, paid service |
-| TaxSaleAtlas | taxsaleatlas.com | Free tax sale calendar, no direct listings |
-| ADOT Surplus | azdot.gov | State surplus land, small inventory |
-| Maricopa County | maricopa.gov | Tax-deeded land, as-needed basis |
-| Yavapai County | yavapaiaz.gov | Tax deed sales, over-the-counter list |
+| Other county sites | Various | Apache, Cochise, Coconino, Gila, Graham, Greenlee, La Paz, Mohave, Navajo, Pima, Pinal, Santa Cruz counties may have tax deed listings |
