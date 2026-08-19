@@ -18,6 +18,16 @@ LANDMODO_JS = """() => {
     return r;
 }"""
 
+GOVAUCTIONS_JS = """() => {
+    const r = [];
+    document.querySelectorAll('a.card-surface, a.group').forEach(a => {
+        const text = (a.innerText || '').substring(0, 600);
+        const href = a.href || '';
+        if (text.includes('$') && text.length > 20) r.push({href, text});
+    });
+    return r;
+}"""
+
 LANDZERO_JS = """() => {
     const r = [];
     document.querySelectorAll('.elementor-post, .e-loop-item, [class*="product"], article').forEach(el => {
@@ -36,6 +46,7 @@ def scrape_all(conn):
     saved = 0
     saved += _cl(conn, save_listing, send_alert)
     saved += _landmodo(conn, save_listing, send_alert)
+    saved += _govauctions(conn, save_listing, send_alert)
     return saved
 
 
@@ -101,3 +112,8 @@ def _pw_scrape(conn, save, alert, name, url, js):
 def _landmodo(conn, save, alert):
     return _pw_scrape(conn, save, alert, 'landmodo',
         'https://www.landmodo.com/arizona-land-for-sale/cheap-land', LANDMODO_JS)
+
+
+def _govauctions(conn, save, alert):
+    return _pw_scrape(conn, save, alert, 'govauctions',
+        'https://govauctions.app/auctions/real-estate/arizona', GOVAUCTIONS_JS)

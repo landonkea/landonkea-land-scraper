@@ -52,5 +52,27 @@
         "avg_price": 6446
       }
     }
+  },
+  {
+    "date": "2026-08-19",
+    "total": 475,
+    "good": 228,
+    "avg_price": 231376,
+    "median_price": 99950,
+    "avg_score": 50.6,
+    "by_source": {
+      "craigslist": {
+        "count": 438,
+        "avg_price": 253566
+      },
+      "landmodo": {
+        "count": 25,
+        "avg_price": 6446
+      },
+      "govauctions": {
+        "count": 12,
+        "avg_price": 2868
+      }
+    }
   }
 ]
