@@ -438,5 +438,111 @@
         "avg_price": 2653
       }
     }
+  },
+  {
+    "date": "2026-08-19",
+    "total": 785,
+    "good": 534,
+    "avg_price": 136841,
+    "median_price": 3000,
+    "avg_score": 61.4,
+    "by_source": {
+      "craigslist": {
+        "count": 421,
+        "avg_price": 258351
+      },
+      "maricopa_county": {
+        "count": 18,
+        "avg_price": 0
+      },
+      "adot": {
+        "count": 8,
+        "avg_price": 328328
+      },
+      "cochise_county": {
+        "count": 335,
+        "avg_price": 1079
+      },
+      "mohave_county": {
+        "count": 3,
+        "avg_price": 2653
+      }
+    }
+  },
+  {
+    "date": "2026-08-19",
+    "total": 812,
+    "good": 561,
+    "avg_price": 132034,
+    "median_price": 3000,
+    "avg_score": 62.0,
+    "by_source": {
+      "craigslist": {
+        "count": 421,
+        "avg_price": 258351
+      },
+      "landmodo": {
+        "count": 15,
+        "avg_price": 7452
+      },
+      "govauctions": {
+        "count": 12,
+        "avg_price": 2902
+      },
+      "maricopa_county": {
+        "count": 18,
+        "avg_price": 0
+      },
+      "adot": {
+        "count": 8,
+        "avg_price": 328328
+      },
+      "cochise_county": {
+        "count": 335,
+        "avg_price": 1079
+      },
+      "mohave_county": {
+        "count": 3,
+        "avg_price": 2653
+      }
+    }
+  },
+  {
+    "date": "2026-08-19",
+    "total": 812,
+    "good": 561,
+    "avg_price": 132034,
+    "median_price": 3000,
+    "avg_score": 62.0,
+    "by_source": {
+      "craigslist": {
+        "count": 421,
+        "avg_price": 258351
+      },
+      "landmodo": {
+        "count": 15,
+        "avg_price": 7452
+      },
+      "govauctions": {
+        "count": 12,
+        "avg_price": 2902
+      },
+      "maricopa_county": {
+        "count": 18,
+        "avg_price": 0
+      },
+      "adot": {
+        "count": 8,
+        "avg_price": 328328
+      },
+      "cochise_county": {
+        "count": 335,
+        "avg_price": 1079
+      },
+      "mohave_county": {
+        "count": 3,
+        "avg_price": 2653
+      }
+    }
   }
 ]

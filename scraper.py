@@ -7,36 +7,36 @@ from playwright_stealth import Stealth  # Stealth patches Playwright so it doesn
 from filters import should_skip, score_listing  # should_skip filters out junk listings; score_listing rates how promising each parcel is.
 from config import CRAIGSLIST_REGIONS, CL_LAND_PATH  # CRAIGSLIST_REGIONS is a list of Craigslist subdomains to hit; CL_LAND_PATH is the URL path for the land category.
 
-LANDMODO_JS = """() => {  # This entire JavaScript block runs inside the browser to extract listing data from Landmodo's search results page.
-    const r = [];  # r is the results array that will hold every listing we find on the page.
-    document.querySelectorAll('.search_result').forEach(el => {  # This loops through every DOM element with the search_result class.
-        const text = (el.innerText || '').substring(0, 600);  # Pulls the visible text from the listing card and cuts it to 600 chars to keep data small.
-        const link = el.querySelector('a[href*="/properties/"]');  # Looks for a link pointing to a specific property page, which has /properties/ in the URL.
-        const href = link ? link.href : el.querySelector('a') ? el.querySelector('a').href : '';  # Falls back to any link if no property link exists, or empty string if nothing is there.
-        if (text.length > 20) r.push({href, text});  # Only keeps listings with real content, skipping empty or near-empty cards.
+LANDMODO_JS = """() => {  // This entire JavaScript block runs inside the browser to extract listing data from Landmodo's search results page.
+    const r = [];  // r is the results array that will hold every listing we find on the page.
+    document.querySelectorAll('.search_result').forEach(el => {  // This loops through every DOM element with the search_result class.
+        const text = (el.innerText || '').substring(0, 600);  // Pulls the visible text from the listing card and cuts it to 600 chars to keep data small.
+        const link = el.querySelector('a[href*="/properties/"]');  // Looks for a link pointing to a specific property page, which has /properties/ in the URL.
+        const href = link ? link.href : el.querySelector('a') ? el.querySelector('a').href : '';  // Falls back to any link if no property link exists, or empty string if nothing is there.
+        if (text.length > 20) r.push({href, text});  // Only keeps listings with real content, skipping empty or near-empty cards.
     });
-    return r;  # Sends the array of {href, text} objects back to Python so it can process them.
+    return r;  // Sends the array of {href, text} objects back to Python so it can process them.
 }"""  # End of the Landmodo JavaScript function.
 
-GOVAUCTIONS_JS = """() => {  # This JavaScript extracts auction listings from GoV Auctions using two different card selector patterns.
-    const r = [];  # Results array, same pattern as the other scrapers.
-    document.querySelectorAll('a.card-surface, a.group').forEach(a => {  # GoV Auctions uses either a.card-surface or a.group as the clickable card wrapper.
-        const text = (a.innerText || '').substring(0, 600);  # Gets the text inside the card and caps it at 600 characters.
-        const href = a.href || '';  # The href is directly on the card anchor element itself.
-        if (text.includes('$') && text.length > 20) r.push({href, text});  # Only keeps cards that show a dollar amount and have real text, filtering out empty placeholders.
+GOVAUCTIONS_JS = """() => {  // This JavaScript extracts auction listings from GoV Auctions using two different card selector patterns.
+    const r = [];  // Results array, same pattern as the other scrapers.
+    document.querySelectorAll('a.card-surface, a.group').forEach(a => {  // GoV Auctions uses either a.card-surface or a.group as the clickable card wrapper.
+        const text = (a.innerText || '').substring(0, 600);  // Gets the text inside the card and caps it at 600 characters.
+        const href = a.href || '';  // The href is directly on the card anchor element itself.
+        if (text.includes('$') && text.length > 20) r.push({href, text});  // Only keeps cards that show a dollar amount and have real text, filtering out empty placeholders.
     });
-    return r;  # Returns the filtered listing data to Python.
+    return r;  // Returns the filtered listing data to Python.
 }"""  # End of the GoV Auctions JavaScript function.
 
-LANDZERO_JS = """() => {  # This JavaScript scrapes Land Zero, which uses Elementor and WordPress, so the selectors target those specific class names.
-    const r = [];  # Results array for Land Zero listings.
-    document.querySelectorAll('.elementor-post, .e-loop-item, [class*="product"], article').forEach(el => {  # Catches Elementor posts, loop items, anything with product in the class, and generic article tags.
-        const text = (el.innerText || '').substring(0, 600);  # Extracts visible text from the listing element.
-        const link = el.querySelector('a');  # Finds the first anchor tag inside the listing, which should be the property link.
-        const href = link ? link.href : '';  # Uses the link href or falls back to empty string.
-        if (text.length > 20 && text.includes('$')) r.push({href, text});  # Keeps listings that have a price and enough text to be a real listing.
+LANDZERO_JS = """() => {  // This JavaScript scrapes Land Zero, which uses Elementor and WordPress, so the selectors target those specific class names.
+    const r = [];  // Results array for Land Zero listings.
+    document.querySelectorAll('.elementor-post, .e-loop-item, [class*="product"], article').forEach(el => {  // Catches Elementor posts, loop items, anything with product in the class, and generic article tags.
+        const text = (el.innerText || '').substring(0, 600);  // Extracts visible text from the listing element.
+        const link = el.querySelector('a');  // Finds the first anchor tag inside the listing, which should be the property link.
+        const href = link ? link.href : '';  // Uses the link href or falls back to empty string.
+        if (text.length > 20 && text.includes('$')) r.push({href, text});  // Keeps listings that have a price and enough text to be a real listing.
     });
-    return r;  # Sends the data back to Python.
+    return r;  // Sends the data back to Python.
 }"""  # End of the Land Zero JavaScript function.
 
 
