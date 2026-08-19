@@ -1,1 +1,56 @@
-[]
+[
+  {
+    "date": "2026-08-19",
+    "total": 465,
+    "good": 216,
+    "avg_price": 238240,
+    "median_price": 115000,
+    "avg_score": 50.2,
+    "by_source": {
+      "craigslist": {
+        "count": 440,
+        "avg_price": 253530
+      },
+      "landmodo": {
+        "count": 25,
+        "avg_price": 6446
+      }
+    }
+  },
+  {
+    "date": "2026-08-19",
+    "total": 465,
+    "good": 216,
+    "avg_price": 238240,
+    "median_price": 115000,
+    "avg_score": 50.2,
+    "by_source": {
+      "craigslist": {
+        "count": 440,
+        "avg_price": 253530
+      },
+      "landmodo": {
+        "count": 25,
+        "avg_price": 6446
+      }
+    }
+  },
+  {
+    "date": "2026-08-19",
+    "total": 463,
+    "good": 216,
+    "avg_price": 238197,
+    "median_price": 115000,
+    "avg_score": 50.2,
+    "by_source": {
+      "craigslist": {
+        "count": 438,
+        "avg_price": 253566
+      },
+      "landmodo": {
+        "count": 25,
+        "avg_price": 6446
+      }
+    }
+  }
+]

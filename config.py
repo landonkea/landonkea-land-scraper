@@ -14,11 +14,7 @@ CRAIGSLIST_REGIONS = ['phoenix', 'prescott', 'flagstaff', 'yuma']
 CL_LAND_PATH = '/rea'
 
 PLAYWRIGHT_SITES = [
-    {'name': 'zillow', 'domain': 'zillow.com', 'url': 'https://www.zillow.com/phoenix-az/land/'},
-    {'name': 'realtor', 'domain': 'realtor.com', 'url': 'https://www.realtor.com/realestateandhomes-search/Phoenix_AZ/land'},
-    {'name': 'landwatch', 'domain': 'landwatch.com', 'url': 'https://www.landwatch.com/arizona-land-for-sale'},
-    {'name': 'landandfarm', 'domain': 'landandfarm.com', 'url': 'https://www.landandfarm.com/Arizona-land-for-sale'},
-    {'name': 'crexi', 'domain': 'crexi.com', 'url': 'https://www.crexi.com/properties?type=land&sort=price_asc&state=Arizona'},
+    {'name': 'landmodo', 'url': 'https://www.landmodo.com/arizona-land-for-sale/cheap-land'},
 ]
 
 GEO_BOUNDS = {'min_lat': 33.5, 'max_lat': 35.1}
