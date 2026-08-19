@@ -32,7 +32,7 @@ LEASE = re.compile(r'lease only|for lease|leasing only|ground lease|sublease', r
 
 # Compiled regex to flag properties with liens or in foreclosure.
 # Tax liens and foreclosures mean legal headaches and potential loss of property.
-LIEN = re.compile(r'tax lien|government lien|irs lien|bank owned|reo|short sale|foreclosure|lis pendens', re.I)
+LIEN = re.compile(r'tax lien|government lien|irs lien|bank owned|reo|short sale|lis pendens', re.I)
 
 # Compiled regex to identify properties with paved road access.
 # Paved roads mean easier access and better resale value.
