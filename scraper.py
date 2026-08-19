@@ -47,6 +47,7 @@ def scrape_all(conn):
     saved += _cl(conn, save_listing, send_alert)
     saved += _landmodo(conn, save_listing, send_alert)
     saved += _govauctions(conn, save_listing, send_alert)
+    saved += _maricopa(conn, save_listing, send_alert)
     return saved
 
 
@@ -117,3 +118,68 @@ def _landmodo(conn, save, alert):
 def _govauctions(conn, save, alert):
     return _pw_scrape(conn, save, alert, 'govauctions',
         'https://govauctions.app/auctions/real-estate/arizona', GOVAUCTIONS_JS)
+
+
+def _maricopa(conn, save, alert):
+    """Scrape Maricopa County excess land listings."""
+    saved = 0
+    url = 'https://www.maricopa.gov/5325/Available-for-Sale'
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        ctx = browser.new_context()
+        Stealth().apply_stealth_sync(ctx)
+        page = ctx.new_page()
+        try:
+            page.goto(url, wait_until='domcontentloaded', timeout=20000)
+            time.sleep(5)
+            for _ in range(10):
+                page.evaluate('window.scrollBy(0, 800)')
+                time.sleep(0.3)
+            text = page.evaluate('() => document.body.innerText')
+        except:
+            browser.close()
+            return 0
+        browser.close()
+
+    # Parse listings from page text
+    # Each listing has: Assessor's Parcel Number, Location, Size, Minimum Bid
+    parcels = re.split(r'Assessor\'s Parcel Number:', text)
+    for chunk in parcels[1:]:  # Skip first chunk (header)
+        lines = [l.strip() for l in chunk.split('\n') if l.strip()]
+        if len(lines) < 3:
+            continue
+
+        parcel = lines[0].strip()
+        location = ''
+        size = ''
+        min_bid = ''
+
+        for i, line in enumerate(lines):
+            if line.startswith('Location:'):
+                location = lines[i+1] if i+1 < len(lines) else ''
+            elif line.startswith('Size:'):
+                size = lines[i+1] if i+1 < len(lines) else ''
+            elif 'Minimum Bid:' in line:
+                min_bid = lines[i+1] if i+1 < len(lines) else ''
+
+        # Extract price from min_bid
+        price = 0
+        if min_bid:
+            pm = re.search(r'\$([\d,]+)', min_bid)
+            if pm:
+                price = float(pm.group(1).replace(',', ''))
+
+        title = f'Maricopa County excess land - {size} - {location}'
+        href = url
+
+        if should_skip(title):
+            continue
+
+        sc = score_listing(title, f'{size} {location} {min_bid}', price)
+        if save(conn, 'maricopa_county', parcel, title, price, href, location, f'Size: {size}. Min bid: {min_bid}', sc):
+            saved += 1
+            if sc >= 40:
+                alert(title, price, href, location, sc, 'maricopa_county')
+
+    print(f'  maricopa_county: +{saved}')
+    return saved

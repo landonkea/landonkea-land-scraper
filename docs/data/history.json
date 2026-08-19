@@ -74,5 +74,31 @@
         "avg_price": 2868
       }
     }
+  },
+  {
+    "date": "2026-08-19",
+    "total": 491,
+    "good": 241,
+    "avg_price": 229268,
+    "median_price": 100000,
+    "avg_score": 50.3,
+    "by_source": {
+      "craigslist": {
+        "count": 438,
+        "avg_price": 249951
+      },
+      "landmodo": {
+        "count": 23,
+        "avg_price": 7470
+      },
+      "govauctions": {
+        "count": 12,
+        "avg_price": 2868
+      },
+      "maricopa_county": {
+        "count": 18,
+        "avg_price": 0
+      }
+    }
   }
 ]
