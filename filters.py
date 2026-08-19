@@ -7,7 +7,7 @@ import re  # We need regular expressions to search through listing text quickly.
 
 # Compiled regex to catch listings that aren't actually land for sale.
 # Matches rental properties, parking spots, storage units, and vacation rentals.
-SKIP = re.compile(r'for rent|for lease|room|roommate|parking|storage|mobile home park| rv |rv lot|camper|vacation rental|airbnb|vrbo', re.I)
+SKIP = re.compile(r'for rent|for lease|room|roommate|parking|storage|mobile home park| rv |rv lot|camper|vacation rental|airbnb|vrbo|rent to own|rental|yearly rental|winter rental|rent this|monthly rent|per month|\/mo|/year|annaul rental|sale or rent|or rent|free rent|paying.*rent', re.I)
 
 # Compiled regex to flag properties in flood-prone areas.
 # Flood zones are a deal-breaker because of insurance costs and safety risks.

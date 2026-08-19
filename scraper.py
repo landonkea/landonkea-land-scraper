@@ -44,13 +44,25 @@ def scrape_all(conn):  # This is the main entry point that runs every scraper an
     from database import save_listing  # save_listing writes a new listing to the SQLite database if it hasn't been seen before.
     from discord import send_alert  # send_alert posts a Discord notification when a high-scoring listing is found.
     saved = 0  # Counter tracks how many new listings were saved across all scrapers.
-    saved += _cl(conn, save_listing, send_alert)  # Craigslist scraper runs first since it's the fastest (just HTTP requests, no browser).
-    saved += _landmodo(conn, save_listing, send_alert)  # Landmodo uses Playwright to load JavaScript-rendered content.
-    saved += _govauctions(conn, save_listing, send_alert)  # GoV Auctions also needs Playwright for its dynamic page.
-    saved += _maricopa(conn, save_listing, send_alert)  # Maricopa County has their own site that loads listings dynamically.
-    saved += _adot(conn, save_listing, send_alert)  # ADOT posts a static page with their land parcels, simple requests call.
-    saved += _cochise(conn, save_listing, send_alert)  # Cochise County publishes a PDF that we have to parse.
-    saved += _mohave(conn, save_listing, send_alert)  # Mohave County also uses a PDF, but with a different table layout.
+    alerts = []  # Collect all alerts first so we can sort them before sending.
+
+    def collect_alert(title, price, url, location, score, source):
+        # Instead of sending immediately, stash the alert for later sorting.
+        alerts.append((price, title, url, location, score, source))
+
+    saved += _cl(conn, save_listing, collect_alert)  # Craigslist scraper runs first since it's the fastest (just HTTP requests, no browser).
+    saved += _landmodo(conn, save_listing, collect_alert)  # Landmodo uses Playwright to load JavaScript-rendered content.
+    saved += _govauctions(conn, save_listing, collect_alert)  # GoV Auctions also needs Playwright for its dynamic page.
+    saved += _maricopa(conn, save_listing, collect_alert)  # Maricopa County has their own site that loads listings dynamically.
+    saved += _adot(conn, save_listing, collect_alert)  # ADOT posts a static page with their land parcels, simple requests call.
+    saved += _cochise(conn, save_listing, collect_alert)  # Cochise County publishes a PDF that we have to parse.
+    saved += _mohave(conn, save_listing, collect_alert)  # Mohave County also uses a PDF, but with a different table layout.
+
+    # Sort alerts cheapest first, then send them to Discord.
+    alerts.sort(key=lambda a: a[0])  # Sort by price ascending.
+    for price, title, url, location, score, source in alerts:
+        send_alert(title, price, url, location, score, source)  # Now send each alert in order.
+
     return saved  # Total count goes back to the caller so it can log or display it.
 
 

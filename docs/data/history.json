@@ -348,5 +348,95 @@
         "avg_price": 2653
       }
     }
+  },
+  {
+    "date": "2026-08-19",
+    "total": 788,
+    "good": 537,
+    "avg_price": 136109,
+    "median_price": 3000,
+    "avg_score": 61.4,
+    "by_source": {
+      "craigslist": {
+        "count": 424,
+        "avg_price": 255941
+      },
+      "maricopa_county": {
+        "count": 18,
+        "avg_price": 0
+      },
+      "adot": {
+        "count": 8,
+        "avg_price": 328328
+      },
+      "cochise_county": {
+        "count": 335,
+        "avg_price": 1079
+      },
+      "mohave_county": {
+        "count": 3,
+        "avg_price": 2653
+      }
+    }
+  },
+  {
+    "date": "2026-08-19",
+    "total": 785,
+    "good": 536,
+    "avg_price": 136193,
+    "median_price": 3000,
+    "avg_score": 61.5,
+    "by_source": {
+      "craigslist": {
+        "count": 421,
+        "avg_price": 257088
+      },
+      "maricopa_county": {
+        "count": 18,
+        "avg_price": 0
+      },
+      "adot": {
+        "count": 8,
+        "avg_price": 328328
+      },
+      "cochise_county": {
+        "count": 335,
+        "avg_price": 1079
+      },
+      "mohave_county": {
+        "count": 3,
+        "avg_price": 2653
+      }
+    }
+  },
+  {
+    "date": "2026-08-19",
+    "total": 785,
+    "good": 536,
+    "avg_price": 136193,
+    "median_price": 3000,
+    "avg_score": 61.5,
+    "by_source": {
+      "craigslist": {
+        "count": 421,
+        "avg_price": 257088
+      },
+      "maricopa_county": {
+        "count": 18,
+        "avg_price": 0
+      },
+      "adot": {
+        "count": 8,
+        "avg_price": 328328
+      },
+      "cochise_county": {
+        "count": 335,
+        "avg_price": 1079
+      },
+      "mohave_county": {
+        "count": 3,
+        "avg_price": 2653
+      }
+    }
   }
 ]

@@ -10,6 +10,8 @@ from datetime import datetime
 
 from config import DISCORD_WEBHOOK
 # pulls the webhook URL from my config file, keeps secrets out of the main code
+from config import MAX_PRICE
+# the price ceiling for Discord alerts, keeps expensive listings out of the channel
 
 
 def send_alert(title, price, url, location, score, source):
@@ -23,6 +25,11 @@ def send_alert(title, price, url, location, score, source):
         # this way the user still sees new listings in the terminal even without Discord
         return
         # bail out early, no point trying to post with a missing webhook URL
+
+    if price > MAX_PRICE:
+        # listings above the price ceiling don't get sent to Discord
+        # they still get saved to the database, just not alerted on
+        return
 
     color = 0x00ff00 if score >= 70 else 0xffff00 if score >= 50 else 0xff9900
     # the embed border color changes based on how good the match is
