@@ -60,6 +60,7 @@ def scrape_all(conn):  # This is the main entry point that runs every scraper an
     saved += _cochise(conn, save_listing, collect_alert)  # Cochise County publishes a PDF that we have to parse.
     saved += _mohave(conn, save_listing, collect_alert)  # Mohave County also uses a PDF, but with a different table layout.
     saved += _yavapai(conn, save_listing, collect_alert)  # Yavapai County publishes an over-the-counter tax deed PDF.
+    saved += _pinal(conn, save_listing, collect_alert)  # Pinal County publishes an over-the-counter tax deed PDF.
 
     # Sort alerts cheapest first, then send them to Discord.
     alerts.sort(key=lambda a: a[0])  # Sort by price ascending.
@@ -417,6 +418,7 @@ def _yavapai(conn, save, alert):  # Yavapai County scraper, parses their over-th
     saved = 0  # Counter for new Yavapai listings saved.
     pdf_url = 'https://www.yavapaiaz.gov/files/sharedassets/public/v/1/mapping-and-properties/parcelsforsaleundertaxdeedsale-04022025-2.pdf'  # Direct link to Yavapai County's over-the-counter tax deed list.
     headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'}  # Fake browser user agent for the PDF request.
+    gis_url = 'https://services1.arcgis.com/BajuNXbtZNiBKFkx/arcgis/rest/services/Parcels_in_Yavapai_County/FeatureServer/0/query'  # ArcGIS REST API for Yavapai County parcel data.
     try:  # Wraps the download in error handling.
         r = requests.get(pdf_url, headers=headers, timeout=30)  # Downloads the PDF with a 30-second timeout.
         if r.status_code != 200:  # Checks if the server responded successfully.
@@ -461,18 +463,105 @@ def _yavapai(conn, save, alert):  # Yavapai County scraper, parses their over-th
             if price <= 0:  # Zero or negative prices aren't useful for buying.
                 continue  # Skips this listing.
 
+            # Query the ArcGIS API for parcel details (subdivision name, address, acreage).
+            subdivision = ''  # Subdivision name from GIS.
+            address = ''  # Street address from GIS.
+            acres = 0  # Lot size in acres from GIS.
+            try:  # Wraps the API call in error handling so one failure doesn't stop everything.
+                gis_params = {  # Parameters for the ArcGIS query.
+                    'where': f"PARLABEL='{parcel}'",  # Search by the dash-format parcel number.
+                    'outFields': 'SUBNAME,SITUS_ADD_DOR,Shape__Area',  # We want subdivision, address, and area.
+                    'f': 'json'  # Request JSON response.
+                }
+                gr = requests.get(gis_url, params=gis_params, timeout=10)  # Queries the API with a 10-second timeout.
+                gdata = gr.json()  # Parses the JSON response.
+                if gdata.get('features'):  # If we got results back.
+                    attrs = gdata['features'][0]['attributes']  # Gets the first (and only) matching parcel.
+                    subdivision = attrs.get('SUBNAME') or ''  # Extracts subdivision name, or empty string.
+                    address = attrs.get('SITUS_ADD_DOR') or ''  # Extracts street address, or empty string.
+                    area_sqft = attrs.get('Shape__Area') or 0  # Extracts area in square feet.
+                    if area_sqft and area_sqft > 0:  # If we got a valid area.
+                        acres = round(area_sqft / 43560, 2)  # Converts square feet to acres.
+            except:  # If the API call fails for any reason...
+                pass  # ...we just continue with empty subdivision/address data.
+
+            # Build a richer title with subdivision and address info.
+            location_parts = [p for p in [subdivision, address.strip(), 'Yavapai County'] if p]  # Collects location info.
+            location = ', '.join(location_parts)  # Joins with commas for the location field.
             title = f'Yavapai County tax deed - {desc[:50]}'  # Builds a title, truncating the description to 50 characters.
+            if subdivision:  # If we got a subdivision name from GIS...
+                title = f'{subdivision} - Yavapai tax deed - {desc[:40]}'  # ...include it in the title for better context.
             if should_skip(title):  # Checks against exclusion filters.
                 continue  # Skips it if it matches.
 
+            # Build a detailed description with all the info we have.
+            detail_parts = [f'Owner: {owner}', f'Desc: {desc}']  # Starts with owner and description.
+            if subdivision:  # Adds subdivision if available.
+                detail_parts.append(f'Subdivision: {subdivision}')
+            if address.strip():  # Adds address if available.
+                detail_parts.append(f'Address: {address.strip()}')
+            if acres > 0:  # Adds acreage if available.
+                detail_parts.append(f'Size: {acres} acres')
+            detail_parts.append(f'Redemption: ${price:,.0f}')  # Always includes the price.
+            description = '. '.join(detail_parts)  # Joins all parts into a single description string.
+
             url = 'https://www.yavapaiaz.gov/Mapping-and-Properties/Property-Taxes/Tax-Deed-Sales'  # Links to Yavapai County's tax deed sales page.
-            sc = score_listing(title, f'{desc} {owner}', price)  # Scores the listing using description and owner name.
-            if save(conn, 'yavapai_county', parcel, title, price, url, 'Yavapai County', f'Owner: {owner}. Desc: {desc}. Redemption: ${price:,.0f}', sc):  # Saves to database with the parcel number as the unique ID.
+            sc = score_listing(title, f'{desc} {owner} {subdivision}', price)  # Scores the listing using description, owner, and subdivision.
+            if save(conn, 'yavapai_county', parcel, title, price, url, location, description, sc):  # Saves to database with the parcel number as the unique ID.
                 saved += 1  # Counts the new listing.
                 if sc >= 40:  # Only alerts on the good ones.
-                    alert(title, price, url, 'Yavapai County', sc, 'yavapai_county')  # Sends the Discord notification.
+                    alert(title, price, url, location, sc, 'yavapai_county')  # Sends the Discord notification.
     except:  # Catches any error during PDF parsing.
         return 0  # Returns zero so other scrapers keep running.
 
     print(f'  yavapai_county: +{saved}')  # Reports how many new Yavapai listings were found.
+    return saved  # Returns the count for the running total.
+
+
+def _pinal(conn, save, alert):  # Pinal County scraper, parses their over-the-counter tax deed PDF.
+    """Scrape Pinal County OTC tax deed parcels from PDF."""  # Docstring says this targets Pinal County's available tax deed properties.
+    saved = 0  # Counter for new Pinal listings saved.
+    pdf_url = 'https://treasurer.pinal.gov/downloads/Over%20The%20Counter%20State%20Tax%20Deed%20List%20July%202026.pdf'  # Direct link to Pinal County's OTC tax deed list.
+    headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'}  # Fake browser user agent.
+    try:  # Wraps the download in error handling.
+        r = requests.get(pdf_url, headers=headers, timeout=30)  # Downloads the PDF with a 30-second timeout.
+        if r.status_code != 200:  # Checks if the server responded successfully.
+            print(f'  pinal_county: PDF fetch failed ({r.status_code})')  # Reports the HTTP error.
+            return 0  # Can't parse without the PDF.
+    except:  # Catches network errors.
+        return 0  # Returns zero on failure.
+
+    try:  # Wraps the parsing logic in error handling.
+        with pdfplumber.open(io.BytesIO(r.content)) as pdf:  # Opens the PDF from the downloaded bytes.
+            for page in pdf.pages:  # Loops through each page of the PDF.
+                tables = page.extract_tables()  # Extracts tables from the PDF page.
+                for table in tables:  # Loops through each table found.
+                    for row in table:  # Loops through each row in the table.
+                        if not row or not row[0]:  # Skips empty rows.
+                            continue  # Moves to the next row.
+                        parcel = str(row[0]).strip()  # Column 0 is the parcel number.
+                        if not re.match(r'\d{3}-\d{2}-\d{3}', parcel):  # Validates it's a real parcel number format.
+                            continue  # Skips headers or malformed rows.
+                        name = str(row[1] or '').strip()  # Column 1 is the owner name.
+                        legals = str(row[2] or '').strip()  # Column 2 is the legal description.
+                        amount_str = str(row[3] or '').replace('$', '').replace(',', '').strip()  # Column 3 is the amount, cleaned of formatting.
+                        try:  # Tries to convert the amount to a float.
+                            price = float(amount_str)  # The minimum bid amount.
+                        except:  # Falls back to zero if parsing fails.
+                            price = 0  # Can't determine the price.
+                        if price <= 0:  # Zero or negative prices aren't useful.
+                            continue  # Skips this listing.
+                        title = f'Pinal County tax deed - {legals[:50]}'  # Builds a title, truncating the legal description.
+                        if should_skip(title):  # Checks against exclusion filters.
+                            continue  # Skips it if it matches.
+                        url = 'https://treasurer.pinal.gov/special-districts.aspx'  # Links to Pinal County's special services page.
+                        sc = score_listing(title, f'{legals} {name}', price)  # Scores the listing.
+                        if save(conn, 'pinal_county', parcel, title, price, url, 'Pinal County', f'Owner: {name}. Desc: {legals}. Bid: ${price:,.0f}', sc):  # Saves to database.
+                            saved += 1  # Counts the new listing.
+                            if sc >= 40:  # Only alerts on the good ones.
+                                alert(title, price, url, 'Pinal County', sc, 'pinal_county')  # Sends the Discord notification.
+    except:  # Catches any error during PDF parsing.
+        return 0  # Returns zero so other scrapers keep running.
+
+    print(f'  pinal_county: +{saved}')  # Reports how many new Pinal listings were found.
     return saved  # Returns the count for the running total.

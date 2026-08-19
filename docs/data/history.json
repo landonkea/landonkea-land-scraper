@@ -624,5 +624,93 @@
         "avg_price": 2234
       }
     }
+  },
+  {
+    "date": "2026-08-19",
+    "total": 855,
+    "good": 612,
+    "avg_price": 122640,
+    "median_price": 2250,
+    "avg_score": 61.8,
+    "by_source": {
+      "craigslist": {
+        "count": 416,
+        "avg_price": 256291
+      },
+      "landmodo": {
+        "count": 15,
+        "avg_price": 7452
+      },
+      "govauctions": {
+        "count": 12,
+        "avg_price": 2902
+      },
+      "maricopa_county": {
+        "count": 18,
+        "avg_price": 0
+      },
+      "adot": {
+        "count": 8,
+        "avg_price": 328328
+      },
+      "cochise_county": {
+        "count": 335,
+        "avg_price": 1079
+      },
+      "mohave_county": {
+        "count": 3,
+        "avg_price": 2653
+      },
+      "yavapai_county": {
+        "count": 48,
+        "avg_price": 2234
+      }
+    }
+  },
+  {
+    "date": "2026-08-19",
+    "total": 859,
+    "good": 616,
+    "avg_price": 122080,
+    "median_price": 2450,
+    "avg_score": 70.3,
+    "by_source": {
+      "craigslist": {
+        "count": 417,
+        "avg_price": 255607
+      },
+      "landmodo": {
+        "count": 15,
+        "avg_price": 7452
+      },
+      "govauctions": {
+        "count": 12,
+        "avg_price": 2902
+      },
+      "maricopa_county": {
+        "count": 18,
+        "avg_price": 0
+      },
+      "adot": {
+        "count": 8,
+        "avg_price": 328328
+      },
+      "cochise_county": {
+        "count": 335,
+        "avg_price": 1079
+      },
+      "mohave_county": {
+        "count": 3,
+        "avg_price": 2653
+      },
+      "yavapai_county": {
+        "count": 48,
+        "avg_price": 2234
+      },
+      "pinal_county": {
+        "count": 3,
+        "avg_price": 13933
+      }
+    }
   }
 ]

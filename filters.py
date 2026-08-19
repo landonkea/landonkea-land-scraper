@@ -131,6 +131,8 @@ def score_listing(title, text='', price=0):
     s = 40  # Start at 40 points as a baseline for all listings.
     if HIGH.search(c): s += 35  # An existing well is the best feature, worth 35 points.
     if CARRY.search(c): s += 25  # Owner financing makes land accessible, worth 25 points.
+    # Tax deed properties get a big bonus because they're the cheapest way to buy land.
+    if re.search(r'tax deed|tax sale|over.the.counter|otc|redemption', c): s += 20  # Tax deed properties are usually the cheapest deals available.
     if NO_HOA.search(c): s += 10  # No HOA means no monthly fees or restrictions.
     if PAVED.search(c): s += 10  # Paved roads make access easy year-round.
     if ELECTRIC.search(c): s += 8  # Electric power saves thousands in utility costs.
