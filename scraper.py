@@ -1,6 +1,7 @@
 """scraper.py - Scraping logic for land listings."""  # This module handles pulling land listings from various county and public websites.
 
-import re, time, requests  # re handles regex patterns for price parsing; time adds delays between page loads; requests fetches raw HTML from websites that don't need a browser.
+import re, time, requests, io  # re handles regex patterns for price parsing; time adds delays between page loads; requests fetches raw HTML; io handles in-memory file streams for PDFs.
+import pdfplumber  # pdfplumber extracts text from PDF files like county tax sale lists.
 from bs4 import BeautifulSoup  # BeautifulSoup parses HTML into a tree we can search for specific tags and classes.
 from playwright.sync_api import sync_playwright  # Playwright launches a real browser to scrape JavaScript-heavy sites that requests can't handle.
 from playwright_stealth import Stealth  # Stealth patches Playwright so it doesn't look like a bot to sites that block headless browsers.
@@ -53,10 +54,12 @@ def scrape_all(conn):  # This is the main entry point that runs every scraper an
     saved += _cl(conn, save_listing, collect_alert)  # Craigslist scraper runs first since it's the fastest (just HTTP requests, no browser).
     saved += _landmodo(conn, save_listing, collect_alert)  # Landmodo uses Playwright to load JavaScript-rendered content.
     saved += _govauctions(conn, save_listing, collect_alert)  # GoV Auctions also needs Playwright for its dynamic page.
+    saved += _landzero(conn, save_listing, collect_alert)  # Land Zero uses Elementor/WordPress, needs Playwright to render.
     saved += _maricopa(conn, save_listing, collect_alert)  # Maricopa County has their own site that loads listings dynamically.
     saved += _adot(conn, save_listing, collect_alert)  # ADOT posts a static page with their land parcels, simple requests call.
     saved += _cochise(conn, save_listing, collect_alert)  # Cochise County publishes a PDF that we have to parse.
     saved += _mohave(conn, save_listing, collect_alert)  # Mohave County also uses a PDF, but with a different table layout.
+    saved += _yavapai(conn, save_listing, collect_alert)  # Yavapai County publishes an over-the-counter tax deed PDF.
 
     # Sort alerts cheapest first, then send them to Discord.
     alerts.sort(key=lambda a: a[0])  # Sort by price ascending.
@@ -133,6 +136,11 @@ def _landmodo(conn, save, alert):  # Landmodo scraper, a thin wrapper that calls
 def _govauctions(conn, save, alert):  # GoV Auctions scraper, another thin wrapper around the generic Playwright function.
     return _pw_scrape(conn, save, alert, 'govauctions',  # Passes 'govauctions' as the source name.
         'https://govauctions.app/auctions/real-estate/arizona', GOVAUCTIONS_JS)  # Targets the Arizona real estate auctions page and uses the GoV Auctions JavaScript.
+
+
+def _landzero(conn, save, alert):  # Land Zero scraper, uses Playwright to load their Elementor/WordPress site.
+    return _pw_scrape(conn, save, alert, 'landzero',  # Passes 'landzero' as the source name.
+        'https://landzero.com/cheap-land/arizona/', LANDZERO_JS)  # Points to the Arizona cheap land page and uses the Land Zero JavaScript selector.
 
 
 def _maricopa(conn, save, alert):  # Maricopa County scraper, handles their specific site layout where parcels are labeled with "Assessor's Parcel Number:".
@@ -401,4 +409,70 @@ def _mohave(conn, save, alert):  # Mohave County scraper, also PDF-based but wit
         return 0  # Returns zero so other scrapers keep running.
 
     print(f'  mohave_county: +{saved}')  # Reports how many new Mohave listings were found.
+    return saved  # Returns the count for the running total.
+
+
+def _yavapai(conn, save, alert):  # Yavapai County scraper, parses their over-the-counter tax deed PDF.
+    """Scrape Yavapai County OTC tax deed parcels from PDF."""  # Docstring says this targets Yavapai County's available tax deed properties.
+    saved = 0  # Counter for new Yavapai listings saved.
+    pdf_url = 'https://www.yavapaiaz.gov/files/sharedassets/public/v/1/mapping-and-properties/parcelsforsaleundertaxdeedsale-04022025-2.pdf'  # Direct link to Yavapai County's over-the-counter tax deed list.
+    headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'}  # Fake browser user agent for the PDF request.
+    try:  # Wraps the download in error handling.
+        r = requests.get(pdf_url, headers=headers, timeout=30)  # Downloads the PDF with a 30-second timeout.
+        if r.status_code != 200:  # Checks if the server responded successfully.
+            print(f'  yavapai_county: PDF fetch failed ({r.status_code})')  # Reports the HTTP error if the download failed.
+            return 0  # Can't parse without the PDF.
+    except:  # Catches network errors.
+        return 0  # Returns zero on failure.
+
+    try:  # Wraps the parsing logic in error handling.
+        with pdfplumber.open(io.BytesIO(r.content)) as pdf:  # Opens the PDF from the downloaded bytes.
+            full_text = ''  # Accumulates text from all pages.
+            for page in pdf.pages:  # Loops through each page of the PDF.
+                text = page.extract_text()  # Extracts raw text from the current page.
+                if text:  # Only adds non-empty pages.
+                    full_text += text + '\n'  # Appends the page text with a newline separator.
+
+        # Parse the PDF text into individual parcels.
+        # The format is: "Former Owner - NAME\nParcel Number - XXX-XX-XXX\nPartial Description: ...\nRedemption Amount - $X,XXX"
+        parcel_blocks = re.split(r'(?=Former Owner\s*[-–])', full_text)  # Splits the text at each "Former Owner" header to get individual parcels.
+
+        for block in parcel_blocks:  # Loops through each parcel block.
+            if not block.strip():  # Skips empty blocks.
+                continue  # Moves to the next one.
+
+            owner_match = re.search(r'Former Owner\s*[-–]\s*(.+)', block)  # Extracts the former owner name.
+            parcel_match = re.search(r'Parcel Number\s*[-–]\s*(\S+)', block)  # Extracts the parcel number.
+            desc_match = re.search(r'Partial Description:\s*(.+?)(?:\n|Redemption|Amount)', block, re.S)  # Extracts the property description.
+            amount_match = re.search(r'(?:Redemption Amount|Amount)\s*[-–]\s*\$?([\d,]+\.?\d*)', block)  # Extracts the redemption/minimum bid amount.
+
+            if not parcel_match:  # If we can't find a parcel number, skip this block.
+                continue  # Can't identify the property without it.
+
+            parcel = parcel_match.group(1).strip()  # Gets the parcel number string.
+            owner = owner_match.group(1).strip() if owner_match else 'Unknown'  # Gets the owner name or defaults to Unknown.
+            desc = desc_match.group(1).strip() if desc_match else ''  # Gets the property description or empty string.
+
+            try:  # Tries to convert the redemption amount to a float.
+                price = float(amount_match.group(1).replace(',', ''))  # Removes commas and converts to float.
+            except:  # Falls back to zero if parsing fails.
+                price = 0  # Can't determine the price.
+
+            if price <= 0:  # Zero or negative prices aren't useful for buying.
+                continue  # Skips this listing.
+
+            title = f'Yavapai County tax deed - {desc[:50]}'  # Builds a title, truncating the description to 50 characters.
+            if should_skip(title):  # Checks against exclusion filters.
+                continue  # Skips it if it matches.
+
+            url = 'https://www.yavapaiaz.gov/Mapping-and-Properties/Property-Taxes/Tax-Deed-Sales'  # Links to Yavapai County's tax deed sales page.
+            sc = score_listing(title, f'{desc} {owner}', price)  # Scores the listing using description and owner name.
+            if save(conn, 'yavapai_county', parcel, title, price, url, 'Yavapai County', f'Owner: {owner}. Desc: {desc}. Redemption: ${price:,.0f}', sc):  # Saves to database with the parcel number as the unique ID.
+                saved += 1  # Counts the new listing.
+                if sc >= 40:  # Only alerts on the good ones.
+                    alert(title, price, url, 'Yavapai County', sc, 'yavapai_county')  # Sends the Discord notification.
+    except:  # Catches any error during PDF parsing.
+        return 0  # Returns zero so other scrapers keep running.
+
+    print(f'  yavapai_county: +{saved}')  # Reports how many new Yavapai listings were found.
     return saved  # Returns the count for the running total.
