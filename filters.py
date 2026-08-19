@@ -7,7 +7,14 @@ import re  # We need regular expressions to search through listing text quickly.
 
 # Compiled regex to catch listings that aren't actually land for sale.
 # Matches rental properties, parking spots, storage units, and vacation rentals.
-SKIP = re.compile(r'for rent|for lease|room|roommate|parking|storage|mobile home park| rv |rv lot|camper|vacation rental|airbnb|vrbo|rent to own|rental|yearly rental|winter rental|rent this|monthly rent|per month|\/mo|/year|annaul rental|sale or rent|or rent|free rent|paying.*rent', re.I)
+SKIP = re.compile(r'for rent|for lease|room|roommate|parking|storage|mobile home park| rv |rv lot|camper|vacation rental|airbnb|vrbo|rent to own|rental|yearly rental|winter rental|rent this|monthly rent|per month|\/mo|/year|annaul rental|sale or rent|or rent|free rent|paying.*rent|55 plus|55\+|senior community|senior park|retirement community|age.restricted|adult community|senior living|age 55|ages 55|55 years|55 community|55 park|active adult|lot rent|lot fee|lot fees|park rent|park fee|park fees|lot lease|lot leases|monthly fee|monthly dues|ground rent|space rent|space fee|maintenance fee|maintenance dues|site rent|site fee|annual fee|annual dues|annual assessment|yearly fee|yearly dues|yearly assessment|road maintenance|road fee|road assessment|utility fee|utility charge|utility assessment|club fee|club dues|amenity fee|amenity dues|golf fee|golf dues|special assessment|sewer fee|sewer charge|water fee|water charge|sewer assessment|water assessment|rv park|rv resort|rv community|camper park|campground|trailer park|trailer park|manufactured home community|manufactured housing|commercial only|industrial only|agricultural only|ag only|speedway|raceway|racetrack|race track|gravel pit|quarry|mine adjacent|mining adjacent|city limits|within city|inside city|wetland|unbuildable|unbuildable|cannot build|no build|no construction|shared easement|power line easement|utility easement|easement crossing|brownfield|toxic|hazardous waste|contaminated|landfill adjacent', re.I)
+
+# Compiled regex to catch deed restrictions (but NOT "no deed restrictions").
+# Deed restrictions limit what you can do with the property.
+DEED = re.compile(r'deed restriction', re.I)
+
+# Compiled regex to catch "no deed restrictions" (which is a good thing).
+NO_DEED = re.compile(r'no\s*deed\s*restriction', re.I)
 
 # Compiled regex to flag properties in flood-prone areas.
 # Flood zones are a deal-breaker because of insurance costs and safety risks.
@@ -107,6 +114,9 @@ def should_skip(title, text=''):
     # Only skip if HOA is mentioned without the "no" qualifier.
     if HOA.search(c) and not NO_HOA.search(c):
         return True  # Has HOA fees, skip it.
+    # Deed restrictions are bad, but "no deed restrictions" is good.
+    if DEED.search(c) and not NO_DEED.search(c):
+        return True  # Has deed restrictions, skip it.
     acres = parse_acres(c)  # Try to figure out how big the property is.
     if acres is not None and acres < 0.2:  # Less than a fifth of an acre is too small.
         return True  # Too small to be useful, skip it.

@@ -544,5 +544,43 @@
         "avg_price": 2653
       }
     }
+  },
+  {
+    "date": "2026-08-19",
+    "total": 806,
+    "good": 560,
+    "avg_price": 132365,
+    "median_price": 2975,
+    "avg_score": 62.1,
+    "by_source": {
+      "craigslist": {
+        "count": 415,
+        "avg_price": 260425
+      },
+      "landmodo": {
+        "count": 15,
+        "avg_price": 7452
+      },
+      "govauctions": {
+        "count": 12,
+        "avg_price": 2902
+      },
+      "maricopa_county": {
+        "count": 18,
+        "avg_price": 0
+      },
+      "adot": {
+        "count": 8,
+        "avg_price": 328328
+      },
+      "cochise_county": {
+        "count": 335,
+        "avg_price": 1079
+      },
+      "mohave_county": {
+        "count": 3,
+        "avg_price": 2653
+      }
+    }
   }
 ]
