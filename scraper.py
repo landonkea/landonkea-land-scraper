@@ -8,34 +8,6 @@ from playwright_stealth import Stealth  # Stealth patches Playwright so it doesn
 from filters import should_skip, score_listing  # should_skip filters out junk listings; score_listing rates how promising each parcel is.
 from config import CRAIGSLIST_REGIONS, CL_LAND_PATH  # CRAIGSLIST_REGIONS is a list of Craigslist subdomains to hit; CL_LAND_PATH is the URL path for the land category.
 
-SCRAPER_TIMEOUT = 60  # Max seconds any single scraper can run before it gets killed and skipped.
-
-
-class _TimeoutError(Exception):  # Custom exception raised when a scraper exceeds the time limit.
-    pass  # No body needed — just using it as a signal to stop.
-
-
-def _timeout_handler(signum, frame):  # Signal handler that fires when SIGALRM goes off, raising our timeout exception.
-    raise _TimeoutError()  # Interrupts whatever the scraper was doing and unwinds the stack.
-
-
-def _run_with_timeout(fn, *args):  # Runs any scraper function with a hard time limit using Unix signals.
-    old_handler = signal.signal(signal.SIGALRM, _timeout_handler)  # Installs our timeout handler and saves the old one to restore later.
-    signal.alarm(SCRAPER_TIMEOUT)  # Arms a real OS-level alarm that fires in SCRAPER_TIMEOUT seconds.
-    try:  # Runs the scraper inside the alarm window.
-        result = fn(*args)  # Calls the scraper function with its arguments.
-        signal.alarm(0)  # Disarms the alarm if the scraper finished in time — no timeout occurred.
-        return result  # Returns the scraper's result (number of new listings saved).
-    except _TimeoutError:  # The alarm fired — the scraper took too long.
-        print(f'  WARNING: {fn.__name__} timed out after {SCRAPER_TIMEOUT}s, skipping')  # Logs which scraper hung so we can investigate.
-        return 0  # Returns zero listings saved so the total count stays accurate.
-    except Exception as e:  # Catches any other error from the scraper itself.
-        signal.alarm(0)  # Disarms the alarm so it doesn't fire during the next scraper.
-        print(f'  WARNING: {fn.__name__} failed: {e}')  # Logs the error for debugging.
-        return 0  # Returns zero so other scrapers keep running.
-    finally:  # Always runs, whether the scraper succeeded, timed out, or errored.
-        signal.signal(signal.SIGALRM, old_handler)  # Restores the original signal handler so we don't break anything else.
-
 LANDMODO_JS = """() => {  // This entire JavaScript block runs inside the browser to extract listing data from Landmodo's search results page.
     const r = [];  // r is the results array that will hold every listing we find on the page.
     document.querySelectorAll('.search_result').forEach(el => {  // This loops through every DOM element with the search_result class.
@@ -79,16 +51,16 @@ def scrape_all(conn):  # This is the main entry point that runs every scraper an
         # Instead of sending immediately, stash the alert for later sorting.
         alerts.append((price, title, url, location, score, source))
 
-    saved += _run_with_timeout(_cl, conn, save_listing, collect_alert)  # Craigslist scraper runs first since it's the fastest (just HTTP requests, no browser).
-    saved += _run_with_timeout(_landmodo, conn, save_listing, collect_alert)  # Landmodo uses Playwright to load JavaScript-rendered content.
-    saved += _run_with_timeout(_govauctions, conn, save_listing, collect_alert)  # GoV Auctions also needs Playwright for its dynamic page.
-    saved += _run_with_timeout(_landzero, conn, save_listing, collect_alert)  # Land Zero uses Elementor/WordPress, needs Playwright to render.
-    saved += _run_with_timeout(_maricopa, conn, save_listing, collect_alert)  # Maricopa County has their own site that loads listings dynamically.
-    saved += _run_with_timeout(_adot, conn, save_listing, collect_alert)  # ADOT posts a static page with their land parcels, simple requests call.
-    saved += _run_with_timeout(_cochise, conn, save_listing, collect_alert)  # Cochise County publishes a PDF that we have to parse.
-    saved += _run_with_timeout(_mohave, conn, save_listing, collect_alert)  # Mohave County also uses a PDF, but with a different table layout.
-    saved += _run_with_timeout(_yavapai, conn, save_listing, collect_alert)  # Yavapai County publishes an over-the-counter tax deed PDF.
-    saved += _run_with_timeout(_pinal, conn, save_listing, collect_alert)  # Pinal County publishes an over-the-counter tax deed PDF.
+    saved += _cl(conn, save_listing, collect_alert)  # Craigslist scraper runs first since it's the fastest (just HTTP requests, no browser).
+    saved += _landmodo(conn, save_listing, collect_alert)  # Landmodo uses Playwright to load JavaScript-rendered content.
+    saved += _govauctions(conn, save_listing, collect_alert)  # GoV Auctions also needs Playwright for its dynamic page.
+    saved += _landzero(conn, save_listing, collect_alert)  # Land Zero uses Elementor/WordPress, needs Playwright to render.
+    saved += _maricopa(conn, save_listing, collect_alert)  # Maricopa County has their own site that loads listings dynamically.
+    saved += _adot(conn, save_listing, collect_alert)  # ADOT posts a static page with their land parcels, simple requests call.
+    saved += _cochise(conn, save_listing, collect_alert)  # Cochise County publishes a PDF that we have to parse.
+    saved += _mohave(conn, save_listing, collect_alert)  # Mohave County also uses a PDF, but with a different table layout.
+    saved += _yavapai(conn, save_listing, collect_alert)  # Yavapai County publishes an over-the-counter tax deed PDF.
+    saved += _pinal(conn, save_listing, collect_alert)  # Pinal County publishes an over-the-counter tax deed PDF.
 
     # Sort alerts cheapest first, then send them to Discord.
     alerts.sort(key=lambda a: a[0])  # Sort by price ascending.
@@ -131,9 +103,9 @@ def _pw_scrape(conn, save, alert, name, url, js):  # Generic Playwright scraper 
         Stealth().apply_stealth_sync(ctx)  # Patches the context to avoid bot detection, like making navigator.webdriver return false.
         page = ctx.new_page()  # Opens a new tab in the browser context.
         try:  # Try block so we can close the browser gracefully if anything goes wrong.
-            page.goto(url, wait_until='domcontentloaded', timeout=20000)  # Navigates to the target URL and waits for the HTML to be parsed, with a 20-second timeout.
-            time.sleep(5)  # Waits 5 seconds after page load to let any lazy-loaded content or ads finish rendering.
-            for _ in range(5):  # Scrolls down 5 times to trigger infinite scroll or lazy loading on the page.
+            page.goto(url, wait_until='domcontentloaded', timeout=15000)  # Navigates to the target URL and waits for the HTML to be parsed, with a 15-second timeout.
+            time.sleep(2)  # Brief pause after page load to let JavaScript finish rendering.
+            for _ in range(3):  # Scrolls down 3 times to trigger infinite scroll or lazy loading on the page.
                 page.evaluate('window.scrollBy(0, 1000)')  # Runs JavaScript in the browser to scroll the window down by 1000 pixels.
                 time.sleep(0.5)  # Brief pause between scrolls so the page has time to load new content.
             data = page.evaluate(js)  # Runs the custom JavaScript function (passed in as the js parameter) and captures its return value.
@@ -182,11 +154,11 @@ def _maricopa(conn, save, alert):  # Maricopa County scraper, handles their spec
         Stealth().apply_stealth_sync(ctx)  # Applies anti-bot-detection patches.
         page = ctx.new_page()  # Opens a fresh tab.
         try:  # Try block for error handling during page load and scrolling.
-            page.goto(url, wait_until='domcontentloaded', timeout=20000)  # Loads the Maricopa page and waits for the HTML structure to be ready.
-            time.sleep(5)  # Lets any JavaScript finish running after the initial load.
-            for _ in range(10):  # Scrolls 10 times, more than other scrapers because this page is longer.
+            page.goto(url, wait_until='domcontentloaded', timeout=15000)  # Loads the Maricopa page and waits for the HTML structure to be ready.
+            time.sleep(2)  # Brief pause after page load to let JavaScript finish.
+            for _ in range(5):  # Scrolls 5 times to load dynamic content.
                 page.evaluate('window.scrollBy(0, 800)')  # Scrolls down 800 pixels each time.
-                time.sleep(0.3)  # Short pause between scrolls, faster than other scrapers because this page is simpler.
+                time.sleep(0.3)  # Short pause between scrolls.
             text = page.evaluate('() => document.body.innerText')  # Grabs all visible text from the page body as a single string.
         except:  # Catches navigation or scrolling errors.
             browser.close()  # Cleans up the browser.
