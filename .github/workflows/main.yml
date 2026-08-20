@@ -27,3 +27,9 @@ jobs:
       - run: python main.py
         env:
           DISCORD_WEBHOOK_URL_LAND: ${{ secrets.DISCORD_WEBHOOK_URL_LAND }}
+      - run: python main.py --report
+      - name: Deploy to Cloudflare Pages
+        run: npx wrangler pages deploy docs --project-name ${{ vars.CF_PAGES_PROJECT }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

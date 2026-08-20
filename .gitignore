@@ -1,6 +1,8 @@
 venv/
+.venv/
 .env
 data/lands.db
 __pycache__/
 *.pyc
 .pytest_cache/
+docs/

@@ -68,6 +68,14 @@ def get_top_listings(conn, limit=20):
     # .fetchall() runs the query and returns all matching rows as a list of tuples
 
 
+# grab every listing sorted by price (for browsing)
+def get_all_listings(conn):
+    # Fetches all listings, sorted by price ascending so the cheapest show first.
+    # Returns every column needed for display.
+    return conn.execute('SELECT score,price,title,url,location,source FROM lands ORDER BY price ASC').fetchall()
+    # .fetchall() returns all rows as a list of tuples
+
+
 # get a quick count of how many listings we have total and how many are good
 def get_stats(conn):
     # Count every row in the table
