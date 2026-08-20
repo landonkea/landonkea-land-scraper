@@ -11,25 +11,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Cache pip packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: pip-
-      - name: Cache Playwright browsers
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-chromium
-          restore-keys: playwright-
       - run: pip install -r requirements.txt && playwright install --with-deps chromium
       - run: python main.py
         env:
           DISCORD_WEBHOOK_URL_LAND: ${{ secrets.DISCORD_WEBHOOK_URL_LAND }}
-      - run: python main.py --report
-      - name: Deploy to Cloudflare Pages
-        run: npx wrangler pages deploy docs --project-name ${{ vars.CF_PAGES_PROJECT }}
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
