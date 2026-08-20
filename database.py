@@ -15,7 +15,7 @@ from config import DB_PATH  # pull in the database file path from our config
 def get_connection():
     # First, figure out which folder the database file sits in.
     pathlib.Path(DB_PATH).parent.mkdir(parents=True, exist_ok=True)  # parents=True means "create any missing parent folders too"
-    return sqlite3.connect(DB_PATH)  # connect to the SQLite file, creating it if it doesn't exist yet
+    return sqlite3.connect(DB_PATH, check_same_thread=False)  # check_same_thread=False lets scrapers running in different threads use the same connection
 
 
 # set up the tables if they don't exist
