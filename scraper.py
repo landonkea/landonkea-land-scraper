@@ -52,10 +52,16 @@ def scrape_all(conn):  # This is the main entry point that runs every scraper an
         alerts.append((price, title, url, location, score, source))
 
     saved += _cl(conn, save_listing, collect_alert)  # Craigslist scraper runs first since it's the fastest (just HTTP requests, no browser).
-    saved += _landmodo(conn, save_listing, collect_alert)  # Landmodo uses Playwright to load JavaScript-rendered content.
-    saved += _govauctions(conn, save_listing, collect_alert)  # GoV Auctions also needs Playwright for its dynamic page.
-    saved += _landzero(conn, save_listing, collect_alert)  # Land Zero uses Elementor/WordPress, needs Playwright to render.
-    saved += _maricopa(conn, save_listing, collect_alert)  # Maricopa County has their own site that loads listings dynamically.
+
+    # Launch one Playwright browser and share it across all browser-based scrapers.
+    with sync_playwright() as p:  # Opens a Playwright context that manages the browser lifecycle.
+        browser = p.chromium.launch(headless=True)  # Starts one Chromium browser in headless mode.
+        saved += _landmodo(conn, save_listing, collect_alert, browser)  # Landmodo uses Playwright to load JavaScript-rendered content.
+        saved += _govauctions(conn, save_listing, collect_alert, browser)  # GoV Auctions also needs Playwright for its dynamic page.
+        saved += _landzero(conn, save_listing, collect_alert, browser)  # Land Zero uses Elementor/WordPress, needs Playwright to render.
+        saved += _maricopa(conn, save_listing, collect_alert, browser)  # Maricopa County has their own site that loads listings dynamically.
+        browser.close()  # Closes the shared browser after all Playwright scrapers are done.
+
     saved += _adot(conn, save_listing, collect_alert)  # ADOT posts a static page with their land parcels, simple requests call.
     saved += _cochise(conn, save_listing, collect_alert)  # Cochise County publishes a PDF that we have to parse.
     saved += _mohave(conn, save_listing, collect_alert)  # Mohave County also uses a PDF, but with a different table layout.
@@ -94,76 +100,72 @@ def _cl(conn, save, alert):  # Craigslist scraper. Uses plain requests because C
     return saved  # Returns the total new listings saved across all Craigslist regions.
 
 
-def _pw_scrape(conn, save, alert, name, url, js):  # Generic Playwright scraper that takes a name, URL, and custom JavaScript to run in the browser.
+def _pw_scrape(conn, save, alert, name, url, js, browser):  # Generic Playwright scraper that takes a shared browser instance instead of launching its own.
     """Generic Playwright scraper with custom JS selector."""  # Docstring explains this is a reusable function for any site that needs browser-based scraping.
     saved = 0  # Counter for new listings saved by this scraper.
-    with sync_playwright() as p:  # Opens a Playwright context that manages the browser lifecycle and cleans up when done.
-        browser = p.chromium.launch(headless=True)  # Starts a Chromium browser in headless mode so there's no visible window popping up.
-        ctx = browser.new_context()  # Creates a fresh browser context, which is like an isolated session with its own cookies and settings.
-        Stealth().apply_stealth_sync(ctx)  # Patches the context to avoid bot detection, like making navigator.webdriver return false.
-        page = ctx.new_page()  # Opens a new tab in the browser context.
-        try:  # Try block so we can close the browser gracefully if anything goes wrong.
-            page.goto(url, wait_until='domcontentloaded', timeout=15000)  # Navigates to the target URL and waits for the HTML to be parsed, with a 15-second timeout.
-            time.sleep(2)  # Brief pause after page load to let JavaScript finish rendering.
-            for _ in range(3):  # Scrolls down 3 times to trigger infinite scroll or lazy loading on the page.
-                page.evaluate('window.scrollBy(0, 1000)')  # Runs JavaScript in the browser to scroll the window down by 1000 pixels.
-                time.sleep(0.5)  # Brief pause between scrolls so the page has time to load new content.
-            data = page.evaluate(js)  # Runs the custom JavaScript function (passed in as the js parameter) and captures its return value.
-        except:  # Catches any error from the navigation, scrolling, or JS evaluation.
-            browser.close()  # Closes the browser before returning so we don't leak memory.
-            return 0  # Returns 0 listings saved when something goes wrong.
-        for item in data:  # Iterates through the array of {href, text} objects that the JavaScript returned.
-            href, text = item.get('href', ''), item.get('text', '')  # Unpacks the href and text from each item, defaulting to empty strings.
-            pm = re.search(r'\$([\d,]+)', text)  # Looks for a dollar amount in the listing text using the same price regex pattern.
-            if not pm: continue  # Skips listings that don't show a price, since we can't evaluate them.
-            price = float(pm.group(1).replace(',', ''))  # Converts the matched price string to a float number.
-            lines = [l.strip() for l in text.split('\n') if l.strip()]  # Splits the text into non-empty lines, stripping whitespace from each.
-            title = next((l for l in lines if len(l) > 10 and '$' not in l and 'Posted' not in l), lines[0] if lines else 'Land listing')  # Picks the first decent-looking line as the title, skipping price-only lines and posted dates.
-            if should_skip(title, text): continue  # Filters out listings that match exclusion rules, checking both title and full text this time.
-            sc = score_listing(title, text, price)  # Scores the listing with the full text available, which gives better results than Craigslist.
-            if save(conn, name, href, title, price, href, '', text[:500], sc):  # Saves to database, truncating the body text to 500 characters to keep storage reasonable.
-                saved += 1  # Counts the new listing.
-                if sc >= 40: alert(title, price, href, '', sc, name)  # Sends a Discord alert if the listing is promising enough.
-        browser.close()  # Closes the browser after processing all items, freeing system resources.
+    ctx = browser.new_context()  # Creates a fresh browser context, like an isolated session with its own cookies.
+    Stealth().apply_stealth_sync(ctx)  # Patches the context to avoid bot detection, like making navigator.webdriver return false.
+    page = ctx.new_page()  # Opens a new tab in the browser context.
+    try:  # Try block so we can close the page gracefully if anything goes wrong.
+        page.goto(url, wait_until='domcontentloaded', timeout=15000)  # Navigates to the target URL and waits for the HTML to be parsed, with a 15-second timeout.
+        time.sleep(2)  # Brief pause after page load to let JavaScript finish rendering.
+        for _ in range(3):  # Scrolls down 3 times to trigger infinite scroll or lazy loading on the page.
+            page.evaluate('window.scrollBy(0, 1000)')  # Runs JavaScript in the browser to scroll the window down by 1000 pixels.
+            time.sleep(0.5)  # Brief pause between scrolls so the page has time to load new content.
+        data = page.evaluate(js)  # Runs the custom JavaScript function (passed in as the js parameter) and captures its return value.
+    except:  # Catches any error from the navigation, scrolling, or JS evaluation.
+        ctx.close()  # Closes this tab/context without killing the shared browser.
+        return 0  # Returns 0 listings saved when something goes wrong.
+    for item in data:  # Iterates through the array of {href, text} objects that the JavaScript returned.
+        href, text = item.get('href', ''), item.get('text', '')  # Unpacks the href and text from each item, defaulting to empty strings.
+        pm = re.search(r'\$([\d,]+)', text)  # Looks for a dollar amount in the listing text using the same price regex pattern.
+        if not pm: continue  # Skips listings that don't show a price, since we can't evaluate them.
+        price = float(pm.group(1).replace(',', ''))  # Converts the matched price string to a float number.
+        lines = [l.strip() for l in text.split('\n') if l.strip()]  # Splits the text into non-empty lines, stripping whitespace from each.
+        title = next((l for l in lines if len(l) > 10 and '$' not in l and 'Posted' not in l), lines[0] if lines else 'Land listing')  # Picks the first decent-looking line as the title, skipping price-only lines and posted dates.
+        if should_skip(title, text): continue  # Filters out listings that match exclusion rules, checking both title and full text this time.
+        sc = score_listing(title, text, price)  # Scores the listing with the full text available, which gives better results than Craigslist.
+        if save(conn, name, href, title, price, href, '', text[:500], sc):  # Saves to database, truncating the body text to 500 characters to keep storage reasonable.
+            saved += 1  # Counts the new listing.
+            if sc >= 40: alert(title, price, href, '', sc, name)  # Sends a Discord alert if the listing is promising enough.
+    ctx.close()  # Closes this tab/context so the next scraper gets a clean slate.
     print(f'  {name}: +{saved}')  # Prints how many new listings were found from this source, with the source name.
     return saved  # Returns the count for the caller to add to its running total.
 
 
-def _landmodo(conn, save, alert):  # Landmodo scraper, a thin wrapper that calls the generic Playwright scraper with Landmodo-specific settings.
+def _landmodo(conn, save, alert, browser):  # Landmodo scraper, a thin wrapper that calls the generic Playwright scraper with Landmodo-specific settings.
     return _pw_scrape(conn, save, alert, 'landmodo',  # Passes 'landmodo' as the source name for the database.
-        'https://www.landmodo.com/arizona-land-for-sale/cheap-land', LANDMODO_JS)  # Points to the cheap Arizona land page and uses the Landmodo JavaScript selector we defined earlier.
+        'https://www.landmodo.com/arizona-land-for-sale/cheap-land', LANDMODO_JS, browser)  # Points to the cheap Arizona land page and uses the Landmodo JavaScript selector we defined earlier.
 
 
-def _govauctions(conn, save, alert):  # GoV Auctions scraper, another thin wrapper around the generic Playwright function.
+def _govauctions(conn, save, alert, browser):  # GoV Auctions scraper, another thin wrapper around the generic Playwright function.
     return _pw_scrape(conn, save, alert, 'govauctions',  # Passes 'govauctions' as the source name.
-        'https://govauctions.app/auctions/real-estate/arizona', GOVAUCTIONS_JS)  # Targets the Arizona real estate auctions page and uses the GoV Auctions JavaScript.
+        'https://govauctions.app/auctions/real-estate/arizona', GOVAUCTIONS_JS, browser)  # Targets the Arizona real estate auctions page and uses the GoV Auctions JavaScript.
 
 
-def _landzero(conn, save, alert):  # Land Zero scraper, uses Playwright to load their Elementor/WordPress site.
+def _landzero(conn, save, alert, browser):  # Land Zero scraper, uses Playwright to load their Elementor/WordPress site.
     return _pw_scrape(conn, save, alert, 'landzero',  # Passes 'landzero' as the source name.
-        'https://landzero.com/cheap-land/arizona/', LANDZERO_JS)  # Points to the Arizona cheap land page and uses the Land Zero JavaScript selector.
+        'https://landzero.com/cheap-land/arizona/', LANDZERO_JS, browser)  # Points to the Arizona cheap land page and uses the Land Zero JavaScript selector.
 
 
-def _maricopa(conn, save, alert):  # Maricopa County scraper, handles their specific site layout where parcels are labeled with "Assessor's Parcel Number:".
+def _maricopa(conn, save, alert, browser):  # Maricopa County scraper, handles their specific site layout where parcels are labeled with "Assessor's Parcel Number:".
     """Scrape Maricopa County excess land listings."""  # Docstring tells you this targets Maricopa County specifically.
     saved = 0  # Counter for new listings saved from Maricopa.
     url = 'https://www.maricopa.gov/5325/Available-for-Sale'  # The direct URL to Maricopa County's land-for-sale page.
-    with sync_playwright() as p:  # Opens the Playwright browser context.
-        browser = p.chromium.launch(headless=True)  # Headless Chromium so nothing pops up on screen.
-        ctx = browser.new_context()  # Isolated browser context.
-        Stealth().apply_stealth_sync(ctx)  # Applies anti-bot-detection patches.
-        page = ctx.new_page()  # Opens a fresh tab.
-        try:  # Try block for error handling during page load and scrolling.
-            page.goto(url, wait_until='domcontentloaded', timeout=15000)  # Loads the Maricopa page and waits for the HTML structure to be ready.
-            time.sleep(2)  # Brief pause after page load to let JavaScript finish.
-            for _ in range(5):  # Scrolls 5 times to load dynamic content.
-                page.evaluate('window.scrollBy(0, 800)')  # Scrolls down 800 pixels each time.
-                time.sleep(0.3)  # Short pause between scrolls.
-            text = page.evaluate('() => document.body.innerText')  # Grabs all visible text from the page body as a single string.
-        except:  # Catches navigation or scrolling errors.
-            browser.close()  # Cleans up the browser.
-            return 0  # Returns zero if we couldn't load the page.
-        browser.close()  # Closes the browser once we have the text we need.
+    ctx = browser.new_context()  # Creates a fresh browser context from the shared browser.
+    Stealth().apply_stealth_sync(ctx)  # Applies anti-bot-detection patches.
+    page = ctx.new_page()  # Opens a fresh tab.
+    try:  # Try block for error handling during page load and scrolling.
+        page.goto(url, wait_until='domcontentloaded', timeout=15000)  # Loads the Maricopa page and waits for the HTML structure to be ready.
+        time.sleep(2)  # Brief pause after page load to let JavaScript finish.
+        for _ in range(5):  # Scrolls 5 times to load dynamic content.
+            page.evaluate('window.scrollBy(0, 800)')  # Scrolls down 800 pixels each time.
+            time.sleep(0.3)  # Short pause between scrolls.
+        text = page.evaluate('() => document.body.innerText')  # Grabs all visible text from the page body as a single string.
+    except:  # Catches navigation or scrolling errors.
+        ctx.close()  # Cleans up the browser context.
+        return 0  # Returns zero if we couldn't load the page.
+    ctx.close()  # Closes the browser context once we have the text we need.
 
     # Parse listings from page text  # Everything below processes the raw page text into structured listing data.
     # Each listing has: Assessor's Parcel Number, Location, Size, Minimum Bid  # Describes the fields we expect to find in each listing block.
