@@ -1,8 +1,7 @@
 """scraper.py - Scraping logic for land listings."""  # This module handles pulling land listings from various county and public websites.
 
-import re, time, requests, io  # re handles regex patterns for price parsing; time adds delays between page loads; requests fetches raw HTML; io handles in-memory file streams for PDFs.
+import re, time, requests, io, signal  # re handles regex patterns for price parsing; time adds delays between page loads; requests fetches raw HTML; io handles in-memory file streams for PDFs; signal lets us set a hard kill timer.
 import pdfplumber  # pdfplumber extracts text from PDF files like county tax sale lists.
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout  # TimeoutError from futures lets us kill a scraper that hangs too long.
 from bs4 import BeautifulSoup  # BeautifulSoup parses HTML into a tree we can search for specific tags and classes.
 from playwright.sync_api import sync_playwright  # Playwright launches a real browser to scrape JavaScript-heavy sites that requests can't handle.
 from playwright_stealth import Stealth  # Stealth patches Playwright so it doesn't look like a bot to sites that block headless browsers.
@@ -12,17 +11,30 @@ from config import CRAIGSLIST_REGIONS, CL_LAND_PATH  # CRAIGSLIST_REGIONS is a l
 SCRAPER_TIMEOUT = 60  # Max seconds any single scraper can run before it gets killed and skipped.
 
 
-def _run_with_timeout(fn, *args):  # Runs any scraper function with a hard time limit so one hung site can't block everything.
-    with ThreadPoolExecutor(max_workers=1) as pool:  # Creates a single-thread executor to run the function in the background.
-        future = pool.submit(fn, *args)  # Submits the scraper function for execution.
-        try:  # Tries to get the result within the timeout window.
-            return future.result(timeout=SCRAPER_TIMEOUT)  # Waits up to SCRAPER_TIMEOUT seconds for the scraper to finish.
-        except FuturesTimeout:  # If the scraper takes too long, it's considered hung.
-            print(f'  WARNING: {fn.__name__} timed out after {SCRAPER_TIMEOUT}s, skipping')  # Warns so we know which scraper hung.
-            return 0  # Returns zero listings saved so the total count stays accurate.
-        except Exception as e:  # Catches any other error from the scraper itself.
-            print(f'  WARNING: {fn.__name__} failed: {e}')  # Logs the error for debugging.
-            return 0  # Returns zero so other scrapers keep running.
+class _TimeoutError(Exception):  # Custom exception raised when a scraper exceeds the time limit.
+    pass  # No body needed — just using it as a signal to stop.
+
+
+def _timeout_handler(signum, frame):  # Signal handler that fires when SIGALRM goes off, raising our timeout exception.
+    raise _TimeoutError()  # Interrupts whatever the scraper was doing and unwinds the stack.
+
+
+def _run_with_timeout(fn, *args):  # Runs any scraper function with a hard time limit using Unix signals.
+    old_handler = signal.signal(signal.SIGALRM, _timeout_handler)  # Installs our timeout handler and saves the old one to restore later.
+    signal.alarm(SCRAPER_TIMEOUT)  # Arms a real OS-level alarm that fires in SCRAPER_TIMEOUT seconds.
+    try:  # Runs the scraper inside the alarm window.
+        result = fn(*args)  # Calls the scraper function with its arguments.
+        signal.alarm(0)  # Disarms the alarm if the scraper finished in time — no timeout occurred.
+        return result  # Returns the scraper's result (number of new listings saved).
+    except _TimeoutError:  # The alarm fired — the scraper took too long.
+        print(f'  WARNING: {fn.__name__} timed out after {SCRAPER_TIMEOUT}s, skipping')  # Logs which scraper hung so we can investigate.
+        return 0  # Returns zero listings saved so the total count stays accurate.
+    except Exception as e:  # Catches any other error from the scraper itself.
+        signal.alarm(0)  # Disarms the alarm so it doesn't fire during the next scraper.
+        print(f'  WARNING: {fn.__name__} failed: {e}')  # Logs the error for debugging.
+        return 0  # Returns zero so other scrapers keep running.
+    finally:  # Always runs, whether the scraper succeeded, timed out, or errored.
+        signal.signal(signal.SIGALRM, old_handler)  # Restores the original signal handler so we don't break anything else.
 
 LANDMODO_JS = """() => {  // This entire JavaScript block runs inside the browser to extract listing data from Landmodo's search results page.
     const r = [];  // r is the results array that will hold every listing we find on the page.
