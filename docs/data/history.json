@@ -712,5 +712,47 @@
         "avg_price": 13933
       }
     }
+  },
+  {
+    "date": "2026-08-19",
+    "total": 845,
+    "good": 603,
+    "avg_price": 120582,
+    "median_price": 2388,
+    "avg_score": 70.7,
+    "by_source": {
+      "craigslist": {
+        "count": 422,
+        "avg_price": 249913
+      },
+      "landmodo": {
+        "count": 14,
+        "avg_price": 7542
+      },
+      "govauctions": {
+        "count": 12,
+        "avg_price": 2715
+      },
+      "adot": {
+        "count": 8,
+        "avg_price": 328328
+      },
+      "cochise_county": {
+        "count": 335,
+        "avg_price": 1079
+      },
+      "mohave_county": {
+        "count": 3,
+        "avg_price": 2653
+      },
+      "yavapai_county": {
+        "count": 48,
+        "avg_price": 2234
+      },
+      "pinal_county": {
+        "count": 3,
+        "avg_price": 13933
+      }
+    }
   }
 ]

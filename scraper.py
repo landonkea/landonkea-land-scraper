@@ -2,11 +2,27 @@
 
 import re, time, requests, io  # re handles regex patterns for price parsing; time adds delays between page loads; requests fetches raw HTML; io handles in-memory file streams for PDFs.
 import pdfplumber  # pdfplumber extracts text from PDF files like county tax sale lists.
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout  # TimeoutError from futures lets us kill a scraper that hangs too long.
 from bs4 import BeautifulSoup  # BeautifulSoup parses HTML into a tree we can search for specific tags and classes.
 from playwright.sync_api import sync_playwright  # Playwright launches a real browser to scrape JavaScript-heavy sites that requests can't handle.
 from playwright_stealth import Stealth  # Stealth patches Playwright so it doesn't look like a bot to sites that block headless browsers.
 from filters import should_skip, score_listing  # should_skip filters out junk listings; score_listing rates how promising each parcel is.
 from config import CRAIGSLIST_REGIONS, CL_LAND_PATH  # CRAIGSLIST_REGIONS is a list of Craigslist subdomains to hit; CL_LAND_PATH is the URL path for the land category.
+
+SCRAPER_TIMEOUT = 60  # Max seconds any single scraper can run before it gets killed and skipped.
+
+
+def _run_with_timeout(fn, *args):  # Runs any scraper function with a hard time limit so one hung site can't block everything.
+    with ThreadPoolExecutor(max_workers=1) as pool:  # Creates a single-thread executor to run the function in the background.
+        future = pool.submit(fn, *args)  # Submits the scraper function for execution.
+        try:  # Tries to get the result within the timeout window.
+            return future.result(timeout=SCRAPER_TIMEOUT)  # Waits up to SCRAPER_TIMEOUT seconds for the scraper to finish.
+        except FuturesTimeout:  # If the scraper takes too long, it's considered hung.
+            print(f'  WARNING: {fn.__name__} timed out after {SCRAPER_TIMEOUT}s, skipping')  # Warns so we know which scraper hung.
+            return 0  # Returns zero listings saved so the total count stays accurate.
+        except Exception as e:  # Catches any other error from the scraper itself.
+            print(f'  WARNING: {fn.__name__} failed: {e}')  # Logs the error for debugging.
+            return 0  # Returns zero so other scrapers keep running.
 
 LANDMODO_JS = """() => {  // This entire JavaScript block runs inside the browser to extract listing data from Landmodo's search results page.
     const r = [];  // r is the results array that will hold every listing we find on the page.
@@ -51,16 +67,16 @@ def scrape_all(conn):  # This is the main entry point that runs every scraper an
         # Instead of sending immediately, stash the alert for later sorting.
         alerts.append((price, title, url, location, score, source))
 
-    saved += _cl(conn, save_listing, collect_alert)  # Craigslist scraper runs first since it's the fastest (just HTTP requests, no browser).
-    saved += _landmodo(conn, save_listing, collect_alert)  # Landmodo uses Playwright to load JavaScript-rendered content.
-    saved += _govauctions(conn, save_listing, collect_alert)  # GoV Auctions also needs Playwright for its dynamic page.
-    saved += _landzero(conn, save_listing, collect_alert)  # Land Zero uses Elementor/WordPress, needs Playwright to render.
-    saved += _maricopa(conn, save_listing, collect_alert)  # Maricopa County has their own site that loads listings dynamically.
-    saved += _adot(conn, save_listing, collect_alert)  # ADOT posts a static page with their land parcels, simple requests call.
-    saved += _cochise(conn, save_listing, collect_alert)  # Cochise County publishes a PDF that we have to parse.
-    saved += _mohave(conn, save_listing, collect_alert)  # Mohave County also uses a PDF, but with a different table layout.
-    saved += _yavapai(conn, save_listing, collect_alert)  # Yavapai County publishes an over-the-counter tax deed PDF.
-    saved += _pinal(conn, save_listing, collect_alert)  # Pinal County publishes an over-the-counter tax deed PDF.
+    saved += _run_with_timeout(_cl, conn, save_listing, collect_alert)  # Craigslist scraper runs first since it's the fastest (just HTTP requests, no browser).
+    saved += _run_with_timeout(_landmodo, conn, save_listing, collect_alert)  # Landmodo uses Playwright to load JavaScript-rendered content.
+    saved += _run_with_timeout(_govauctions, conn, save_listing, collect_alert)  # GoV Auctions also needs Playwright for its dynamic page.
+    saved += _run_with_timeout(_landzero, conn, save_listing, collect_alert)  # Land Zero uses Elementor/WordPress, needs Playwright to render.
+    saved += _run_with_timeout(_maricopa, conn, save_listing, collect_alert)  # Maricopa County has their own site that loads listings dynamically.
+    saved += _run_with_timeout(_adot, conn, save_listing, collect_alert)  # ADOT posts a static page with their land parcels, simple requests call.
+    saved += _run_with_timeout(_cochise, conn, save_listing, collect_alert)  # Cochise County publishes a PDF that we have to parse.
+    saved += _run_with_timeout(_mohave, conn, save_listing, collect_alert)  # Mohave County also uses a PDF, but with a different table layout.
+    saved += _run_with_timeout(_yavapai, conn, save_listing, collect_alert)  # Yavapai County publishes an over-the-counter tax deed PDF.
+    saved += _run_with_timeout(_pinal, conn, save_listing, collect_alert)  # Pinal County publishes an over-the-counter tax deed PDF.
 
     # Sort alerts cheapest first, then send them to Discord.
     alerts.sort(key=lambda a: a[0])  # Sort by price ascending.
