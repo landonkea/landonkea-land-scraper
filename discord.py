@@ -75,3 +75,28 @@ def send_alert(title, price, url, location, score, source):
     time.sleep(1.5)
     # always wait 1.5 seconds between messages to stay under Discord's rate limit
     # this keeps the bot running smoothly even with lots of listings
+
+
+def send_summary(saved, total_alerts, cheapest):
+    # Posts a summary message after all alerts are sent, showing run stats.
+    if not DISCORD_WEBHOOK:
+        return  # Can't send without a webhook.
+
+    cheapest_text = f'Cheapest: ${cheapest[0]:,.0f} - {cheapest[1][:50]}' if cheapest else 'No listings found'
+    # Builds the cheapest listing line if there are any alerts.
+
+    embed = {
+        'title': 'Daily Land Scrape Summary',
+        'color': 0x0099ff,  # Blue border for summary messages.
+        'fields': [
+            {'name': 'New Listings', 'value': str(saved), 'inline': True},
+            {'name': 'Alerts Sent', 'value': f'{min(total_alerts, 25)} of {total_alerts}', 'inline': True},
+            {'name': 'Top Deal', 'value': cheapest_text, 'inline': False},
+        ],
+        'footer': {'text': f'Ran {datetime.now().strftime("%m/%d %I:%M %p")}'}
+    }
+
+    try:
+        requests.post(DISCORD_WEBHOOK, json={'embeds': [embed]}, timeout=10)
+    except:
+        pass

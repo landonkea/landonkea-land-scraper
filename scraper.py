@@ -68,10 +68,15 @@ def scrape_all(conn):  # This is the main entry point that runs every scraper an
     saved += _yavapai(conn, save_listing, collect_alert)  # Yavapai County publishes an over-the-counter tax deed PDF.
     saved += _pinal(conn, save_listing, collect_alert)  # Pinal County publishes an over-the-counter tax deed PDF.
 
-    # Sort alerts cheapest first, then send them to Discord.
+    # Sort alerts cheapest first, then send only the top 25 to Discord.
     alerts.sort(key=lambda a: a[0])  # Sort by price ascending.
-    for price, title, url, location, score, source in alerts:
-        send_alert(title, price, url, location, score, source)  # Now send each alert in order.
+    top_alerts = alerts[:25]  # Cap at 25 alerts to avoid spamming the Discord channel.
+    for price, title, url, location, score, source in top_alerts:
+        send_alert(title, price, url, location, score, source)  # Send each alert in order.
+
+    # Send a summary message with stats.
+    from discord import send_summary  # Import here to avoid circular dependency.
+    send_summary(saved, len(alerts), top_alerts[0] if top_alerts else None)  # Post summary to Discord.
 
     return saved  # Total count goes back to the caller so it can log or display it.
 
